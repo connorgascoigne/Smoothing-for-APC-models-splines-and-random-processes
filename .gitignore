@@ -53,9 +53,5 @@ vignettes/*.pdf
 # projec user
 .Rproj.user
 
-# files to not upload
-Data/
-Code/Results
-Code/Results Collecting
-Code/Development
-Code/Outputs
+# PDFs
+.pdf
