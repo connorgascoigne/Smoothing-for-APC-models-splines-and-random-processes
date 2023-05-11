@@ -116,7 +116,7 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/selfHarmDeathsPlot_zoom.png'),
 
 #### estimation ----
 
-alcoholData <-
+alcoholDataAll <-
   data %>% 
   dplyr::mutate(age = Age, 
                 period = Year,
@@ -125,39 +125,41 @@ alcoholData <-
                 y = alcohol_deaths) %>% 
   dplyr::select(Age_Group, age, period, cohort, N, y)
 
+alcoholDataReduced <-
+  alcoholDataAll %>% 
+  dplyr::filter(period %in% min(period):(max(period)-3))
+
 #### prediction ----
 
 alcoholData.splinePredict <- 
-  expand.grid(age = alcoholData$age %>% unique() %>% sort(),
-              period = min(alcoholData$period):(max(alcoholData$period)+3)) %>% 
-  dplyr::mutate(cohort = period - age)
+  alcoholDataAll %>% 
+  dplyr::select(age, period, cohort)
 
 alcoholData.randomWalkPredict <-
-  expand.grid(age = alcoholData$age %>% unique() %>% sort(),
-              period = min(alcoholData$period):(max(alcoholData$period)+3)) %>%
-  dplyr::mutate(cohort = period - age) %>% 
-  dplyr::left_join(., alcoholData %>% dplyr::select(age, period, cohort, y, N), by = c('age', 'period', 'cohort'))
+  alcoholDataAll %>% 
+  dplyr::select(-Age_Group) %>% 
+  dplyr::mutate(y = dplyr::if_else(period > (max(period)-3), NA, y))
 
 ### model fits ----
 
 #### spline ----
 
 crSplineFit <- 
-  spline.real.fit(dataEst = alcoholData, dataPred = alcoholData.splinePredict,
+  spline.real.fit(dataEst = alcoholDataReduced, dataPred = alcoholData.splinePredict,
                    mod = 'apc', slopeDrop = 'c', bs = 'cr', 
-                   knots = list(age = 5, period = 5, cohort = 8),
+                   knots = list(age = 10, period = 10, cohort = 12),
                    fixed = list(age = FALSE, period = FALSE, cohort = FALSE))
 
 bsSplineFit <- 
-  spline.real.fit(dataEst = alcoholData, dataPred = alcoholData.splinePredict,
+  spline.real.fit(dataEst = alcoholDataReduced, dataPred = alcoholData.splinePredict,
                   mod = 'apc', slopeDrop = 'c', bs = 'bs', 
-                  knots = list(age = 5, period = 5, cohort = 8),
+                  knots = list(age = 10, period = 10, cohort = 12),
                   fixed = list(age = FALSE, period = FALSE, cohort = FALSE))
 
 psSplineFit <- 
-  spline.real.fit(dataEst = alcoholData, dataPred = alcoholData.splinePredict,
+  spline.real.fit(dataEst = alcoholDataReduced, dataPred = alcoholData.splinePredict,
                   mod = 'apc', slopeDrop = 'c', bs = 'ps', 
-                  knots = list(age = 5, period = 5, cohort = 8),
+                  knots = list(age = 10, period = 10, cohort = 12),
                   fixed = list(age = FALSE, period = FALSE, cohort = FALSE))
 
 #### random walk ----
@@ -214,54 +216,133 @@ alcoholResults <-
         rw1FitPC1 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW1'),
         rw2FitPC1 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW2')) %>%
   dplyr::mutate(model = model %>% factor(., levels = c('Spline', 'RW1', 'RW2'))) %>%
-  dplyr::left_join(., alcoholData %>% dplyr::select(Age_Group, age) %>% dplyr::distinct(), by = 'age')
+  dplyr::left_join(., alcoholDataAll %>% dplyr::select(Age_Group, age) %>% dplyr::distinct(), by = 'age')
+
+alcoholResultsWide <-
+  alcoholResults %>% 
+  tidyr::pivot_wider(., names_from = model, values_from = c('yHat', 'lower', 'upper'))
 
 
 ### plots ----  
 
 #### heat map ----
 
-predictedAlcoholDeathsHeatmap_all <-
-  ggplot2::ggplot(alcoholResults, aes(y = age, x = period, fill = yHat)) + 
+predictedAlcoholDeathsHeatmap_spline_allYears <-
+  ggplot2::ggplot(alcoholResults %>% filter(model == 'Spline'), aes(y = age, x = period, fill = yHat)) + 
   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
   ggplot2::scale_y_continuous(breaks = seq(10, 85, 5)) +
   ggplot2::geom_raster() +
   ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
-  ggplot2::geom_vline(aes(xintercept = 2021), color = 'red3', linetype = 'dotted') +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
   ggplot2::labs(x = 'Year', y = 'Age') +
-  ggplot2::facet_wrap(~ model) +
   my.theme(text = element_text(size = textSize),
-           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedAlcoholDeathsHeatmap_all
+           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedAlcoholDeathsHeatmap_spline_allYears
 
-predictedAlcoholDeathsHeatmap_zoom <-
-  ggplot2::ggplot(alcoholResults %>% dplyr::filter(age > 24), aes(y = age, x = period, fill = yHat)) + 
+predictedAlcoholDeathsHeatmap_rw1_allYears <-
+  ggplot2::ggplot(alcoholResults %>% filter(model == 'RW1'), aes(y = age, x = period, fill = yHat)) + 
+  ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
+  ggplot2::scale_y_continuous(breaks = seq(10, 85, 5)) +
+  ggplot2::geom_raster() +
+  ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
+  ggplot2::labs(x = 'Year', y = 'Age') +
+  my.theme(text = element_text(size = textSize),
+           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedAlcoholDeathsHeatmap_rw1_allYears
+
+predictedAlcoholDeathsHeatmap_rw2_allYears <-
+  ggplot2::ggplot(alcoholResults %>% filter(model == 'RW2'), aes(y = age, x = period, fill = yHat)) + 
+  ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
+  ggplot2::scale_y_continuous(breaks = seq(10, 85, 5)) +
+  ggplot2::geom_raster() +
+  ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
+  ggplot2::labs(x = 'Year', y = 'Age') +
+  my.theme(text = element_text(size = textSize),
+           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedAlcoholDeathsHeatmap_rw2_allYears
+
+predictedAlcoholDeathsHeatmap_spline_25plus <-
+  ggplot2::ggplot(alcoholResults %>% dplyr::filter(age > 24, model == 'Spline'), aes(y = age, x = period, fill = yHat)) + 
   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
   ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
   ggplot2::geom_raster() +
   ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
-  ggplot2::geom_vline(aes(xintercept = 2021), color = 'red3', linetype = 'dotted') +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
   ggplot2::labs(x = 'Year', y = 'Age') +
-  ggplot2::facet_wrap(~ model) +
   my.theme(text = element_text(size = textSize),
-           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedAlcoholDeathsHeatmap_zoom
+           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedAlcoholDeathsHeatmap_spline_25plus
 
-ggplot2::ggsave(filename = paste0(resultsDir, '/predictedAlcoholDeathsHeatmap_all.png'),
-                plot = predictedAlcoholDeathsHeatmap_all,
+predictedAlcoholDeathsHeatmap_rw1_25plus <-
+  ggplot2::ggplot(alcoholResults %>% dplyr::filter(age > 24, model == 'RW1'), aes(y = age, x = period, fill = yHat)) + 
+  ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
+  ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
+  ggplot2::geom_raster() +
+  ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
+  ggplot2::labs(x = 'Year', y = 'Age') +
+  my.theme(text = element_text(size = textSize),
+           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedAlcoholDeathsHeatmap_rw1_25plus
+
+predictedAlcoholDeathsHeatmap_rw2_25plus <-
+  ggplot2::ggplot(alcoholResults %>% dplyr::filter(age > 24, model == 'RW2'), aes(y = age, x = period, fill = yHat)) + 
+  ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
+  ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
+  ggplot2::geom_raster() +
+  ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
+  ggplot2::labs(x = 'Year', y = 'Age') +
+  my.theme(text = element_text(size = textSize),
+           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedAlcoholDeathsHeatmap_rw2_25plus
+
+ggplot2::ggsave(filename = paste0(resultsDir, '/predictedAlcoholDeathsHeatmap_spline_allYears.png'),
+                plot = predictedAlcoholDeathsHeatmap_spline_allYears,
+                height = height, width = width)
+ggplot2::ggsave(filename = paste0(resultsDir, '/predictedAlcoholDeathsHeatmap_rw1_allYears.png'),
+                plot = predictedAlcoholDeathsHeatmap_rw1_allYears,
+                height = height, width = width)
+ggplot2::ggsave(filename = paste0(resultsDir, '/predictedAlcoholDeathsHeatmap_rw2_allYears.png'),
+                plot = predictedAlcoholDeathsHeatmap_rw2_allYears,
                 height = height, width = width)
 
-ggplot2::ggsave(filename = paste0(resultsDir, '/predictedAlcoholDeathsHeatmap_zoom.png'),
-                plot = predictedAlcoholDeathsHeatmap_zoom,
+ggplot2::ggsave(filename = paste0(resultsDir, '/predictedAlcoholDeathsHeatmap_spline_25plus.png'),
+                plot = predictedAlcoholDeathsHeatmap_spline_25plus,
+                height = height, width = width)
+ggplot2::ggsave(filename = paste0(resultsDir, '/predictedAlcoholDeathsHeatmap_rw1_25plus.png'),
+                plot = predictedAlcoholDeathsHeatmap_rw1_25plus,
+                height = height, width = width)
+ggplot2::ggsave(filename = paste0(resultsDir, '/predictedAlcoholDeathsHeatmap_rw2_25plus.png'),
+                plot = predictedAlcoholDeathsHeatmap_rw2_25plus,
                 height = height, width = width)
 
+
+#### direct comp ----
+
+splineVsRW1 <-
+  ggplot2::ggplot(alcoholResultsWide, aes(x = yHat_Spline, y = yHat_RW1)) +
+  ggplot2::geom_abline(aes(intercept = 0, slope = 1), colour = 'red3', linetype = 'dotted') +
+  ggplot2::geom_point() +
+  my.theme(); splineVsRW1
+
+splineVsRW2 <-
+  ggplot2::ggplot(alcoholResultsWide, aes(x = yHat_Spline, y = yHat_RW2)) +
+  ggplot2::geom_abline(aes(intercept = 0, slope = 1), colour = 'red3', linetype = 'dotted') +
+  ggplot2::geom_point() +
+  my.theme(); splineVsRW2
+
+RW2VsRW1 <-
+  ggplot2::ggplot(alcoholResultsWide, aes(x = yHat_RW2, y = yHat_RW1)) +
+  ggplot2::geom_abline(aes(intercept = 0, slope = 1), colour = 'red3', linetype = 'dotted') +
+  ggplot2::geom_point() +
+  my.theme(); RW2VsRW1
 
 #### line plots ----
 
 predictedAlcoholDeathsLine_all <-
-  ggplot2::ggplot(data = alcoholResults, aes(x = period, group = interaction(Age_Group, model), color = model)) +
-  ggplot2::geom_vline(aes(xintercept = 2021), color = 'red3', linetype = 'dotted') +
-  ggplot2::geom_line(aes(y = yHat)) + 
-  ggplot2:: geom_line(aes(y = lower), linetype = 'dashed') + 
-  ggplot2:: geom_line(aes(y = upper), linetype = 'dashed') +
+  ggplot2::ggplot(data = alcoholResults, aes(x = period)) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
+  ggplot2::geom_line(aes(y = yHat, color = model)) + 
+  ggplot2:: geom_line(aes(y = lower, color = model), linetype = 'dashed') + 
+  ggplot2:: geom_line(aes(y = upper, color = model), linetype = 'dashed') +
+  ggplot2::geom_point(data = alcoholDataAll, aes(y = log(y/N))) +
   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
   ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
   ggplot2::scale_colour_manual(values = c('green4', 'blue3', 'purple3')) + 
@@ -272,11 +353,12 @@ predictedAlcoholDeathsLine_all <-
            axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedAlcoholDeathsLine_all
 
 predictedAlcoholDeathsLine_last4 <-
-  ggplot2::ggplot(data = alcoholResults %>% dplyr::filter(age > 64), aes(x = period, group = interaction(Age_Group, model), color = model)) +
-  ggplot2::geom_vline(aes(xintercept = 2021), color = 'red3', linetype = 'dotted') +
-  ggplot2::geom_line(aes(y = yHat)) + 
-  ggplot2:: geom_line(aes(y = lower), linetype = 'dashed') + 
-  ggplot2:: geom_line(aes(y = upper), linetype = 'dashed') +
+  ggplot2::ggplot(data = alcoholResults %>% dplyr::filter(age > 64), aes(x = period)) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
+  ggplot2::geom_line(aes(y = yHat, color = model)) + 
+  ggplot2:: geom_line(aes(y = lower, color = model), linetype = 'dashed') + 
+  ggplot2:: geom_line(aes(y = upper, color = model), linetype = 'dashed') +
+  ggplot2::geom_point(data = alcoholDataAll %>% dplyr::filter(age > 64), aes(y = log(y/N))) +
   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
   ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
   ggplot2::scale_colour_manual(values = c('green4', 'blue3', 'purple3')) + 
@@ -302,7 +384,7 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/predictedAlcoholDeathsLine_last4
 
 #### estimation ----
 
-selfHarmData <-
+selfHarmDataAll <-
   data %>% 
   dplyr::mutate(age = Age, 
                 period = Year,
@@ -311,39 +393,41 @@ selfHarmData <-
                 y = suicide_deaths) %>% 
   dplyr::select(Age_Group, age, period, cohort, N, y)
 
+selfHarmDataReduced <-
+  selfHarmDataAll %>% 
+  dplyr::filter(period %in% min(period):(max(period)-3))
+
 #### prediction ----
 
 selfHarmData.splinePredict <- 
-  expand.grid(age = selfHarmData$age %>% unique() %>% sort(),
-              period = min(selfHarmData$period):(max(selfHarmData$period)+3)) %>% 
-  dplyr::mutate(cohort = period - age)
+  selfHarmDataAll %>% 
+  dplyr::select(age, period, cohort)
 
 selfHarmData.randomWalkPredict <-
-  expand.grid(age = selfHarmData$age %>% unique() %>% sort(),
-              period = min(selfHarmData$period):(max(selfHarmData$period)+3)) %>%
-  dplyr::mutate(cohort = period - age) %>% 
-  dplyr::left_join(., selfHarmData %>% dplyr::select(age, period, cohort, y, N), by = c('age', 'period', 'cohort'))
+  selfHarmDataAll %>% 
+  dplyr::select(-Age_Group) %>% 
+  dplyr::mutate(y = dplyr::if_else(period > (max(period)-3), NA, y))
 
 ### model fits ----
 
 #### spline ----
 
 crSplineFit <- 
-  spline.real.fit(dataEst = selfHarmData, dataPred = selfHarmData.splinePredict,
+  spline.real.fit(dataEst = selfHarmDataReduced, dataPred = selfHarmData.splinePredict,
                   mod = 'apc', slopeDrop = 'c', bs = 'cr', 
-                  knots = list(age = 5, period = 5, cohort = 8),
+                  knots = list(age = 10, period = 10, cohort = 12),
                   fixed = list(age = FALSE, period = FALSE, cohort = FALSE))
 
 bsSplineFit <- 
-  spline.real.fit(dataEst = selfHarmData, dataPred = selfHarmData.splinePredict,
+  spline.real.fit(dataEst = selfHarmDataReduced, dataPred = selfHarmData.splinePredict,
                   mod = 'apc', slopeDrop = 'c', bs = 'bs', 
-                  knots = list(age = 5, period = 5, cohort = 8),
+                  knots = list(age = 10, period = 10, cohort = 12),
                   fixed = list(age = FALSE, period = FALSE, cohort = FALSE))
 
 psSplineFit <- 
-  spline.real.fit(dataEst = selfHarmData, dataPred = selfHarmData.splinePredict,
+  spline.real.fit(dataEst = selfHarmDataReduced, dataPred = selfHarmData.splinePredict,
                   mod = 'apc', slopeDrop = 'c', bs = 'ps', 
-                  knots = list(age = 5, period = 5, cohort = 8),
+                  knots = list(age = 10, period = 10, cohort = 12),
                   fixed = list(age = FALSE, period = FALSE, cohort = FALSE))
 
 #### random walk ----
@@ -400,54 +484,132 @@ selfHarmResults <-
         rw1FitPC1 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW1'),
         rw2FitPC1 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW2')) %>%
   dplyr::mutate(model = model %>% factor(., levels = c('Spline', 'RW1', 'RW2'))) %>%
-  dplyr::left_join(., selfHarmData %>% dplyr::select(Age_Group, age) %>% dplyr::distinct(), by = 'age')
+  dplyr::left_join(., selfHarmDataAll %>% dplyr::select(Age_Group, age) %>% dplyr::distinct(), by = 'age')
 
+selfHarmResultsWide <-
+  selfHarmResults %>% 
+  tidyr::pivot_wider(., names_from = model, values_from = c('yHat', 'lower', 'upper'))
 
 ### plots ----  
 
 #### heat map ----
 
-predictedSelfHarmDeathsHeatmap_all <-
-  ggplot2::ggplot(selfHarmResults, aes(y = age, x = period, fill = yHat)) + 
+predictedSelfHarmDeathsHeatmap_spline_allYears <-
+  ggplot2::ggplot(selfHarmResults %>% filter(model == 'Spline'), aes(y = age, x = period, fill = yHat)) + 
   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
   ggplot2::scale_y_continuous(breaks = seq(10, 85, 5)) +
   ggplot2::geom_raster() +
   ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
-  ggplot2::geom_vline(aes(xintercept = 2021), color = 'red3', linetype = 'dotted') +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
   ggplot2::labs(x = 'Year', y = 'Age') +
-  ggplot2::facet_wrap(~ model) +
   my.theme(text = element_text(size = textSize),
-           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedSelfHarmDeathsHeatmap_all
+           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedSelfHarmDeathsHeatmap_spline_allYears
 
-predictedSelfHarmDeathsHeatmap_zoom <-
-  ggplot2::ggplot(selfHarmResults %>% dplyr::filter(age > 24), aes(y = age, x = period, fill = yHat)) + 
+predictedSelfHarmDeathsHeatmap_rw1_allYears <-
+  ggplot2::ggplot(selfHarmResults %>% filter(model == 'RW1'), aes(y = age, x = period, fill = yHat)) + 
+  ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
+  ggplot2::scale_y_continuous(breaks = seq(10, 85, 5)) +
+  ggplot2::geom_raster() +
+  ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
+  ggplot2::labs(x = 'Year', y = 'Age') +
+  my.theme(text = element_text(size = textSize),
+           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedSelfHarmDeathsHeatmap_rw1_allYears
+
+predictedSelfHarmDeathsHeatmap_rw2_allYears <-
+  ggplot2::ggplot(selfHarmResults %>% filter(model == 'RW2'), aes(y = age, x = period, fill = yHat)) + 
+  ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
+  ggplot2::scale_y_continuous(breaks = seq(10, 85, 5)) +
+  ggplot2::geom_raster() +
+  ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
+  ggplot2::labs(x = 'Year', y = 'Age') +
+  my.theme(text = element_text(size = textSize),
+           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedSelfHarmDeathsHeatmap_rw2_allYears
+
+predictedSelfHarmDeathsHeatmap_spline_25plus <-
+  ggplot2::ggplot(selfHarmResults %>% dplyr::filter(age > 24, model == 'Spline'), aes(y = age, x = period, fill = yHat)) + 
   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
   ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
   ggplot2::geom_raster() +
   ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
-  ggplot2::geom_vline(aes(xintercept = 2021), color = 'red3', linetype = 'dotted') +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
   ggplot2::labs(x = 'Year', y = 'Age') +
-  ggplot2::facet_wrap(~ model) +
   my.theme(text = element_text(size = textSize),
-           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedSelfHarmDeathsHeatmap_zoom
+           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedSelfHarmDeathsHeatmap_spline_25plus
 
-ggplot2::ggsave(filename = paste0(resultsDir, '/predictedSelfHarmDeathsHeatmap_all.png'),
-                plot = predictedSelfHarmDeathsHeatmap_all,
+predictedSelfHarmDeathsHeatmap_rw1_25plus <-
+  ggplot2::ggplot(selfHarmResults %>% dplyr::filter(age > 24, model == 'RW1'), aes(y = age, x = period, fill = yHat)) + 
+  ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
+  ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
+  ggplot2::geom_raster() +
+  ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
+  ggplot2::labs(x = 'Year', y = 'Age') +
+  my.theme(text = element_text(size = textSize),
+           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedSelfHarmDeathsHeatmap_rw1_25plus
+
+predictedSelfHarmDeathsHeatmap_rw2_25plus <-
+  ggplot2::ggplot(selfHarmResults %>% dplyr::filter(age > 24, model == 'RW2'), aes(y = age, x = period, fill = yHat)) + 
+  ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
+  ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
+  ggplot2::geom_raster() +
+  ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
+  ggplot2::labs(x = 'Year', y = 'Age') +
+  my.theme(text = element_text(size = textSize),
+           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedSelfHarmDeathsHeatmap_rw2_25plus
+
+ggplot2::ggsave(filename = paste0(resultsDir, '/predictedSelfHarmDeathsHeatmap_spline_allYears.png'),
+                plot = predictedSelfHarmDeathsHeatmap_spline_allYears,
+                height = height, width = width)
+ggplot2::ggsave(filename = paste0(resultsDir, '/predictedSelfHarmDeathsHeatmap_rw1_allYears.png'),
+                plot = predictedSelfHarmDeathsHeatmap_rw1_allYears,
+                height = height, width = width)
+ggplot2::ggsave(filename = paste0(resultsDir, '/predictedSelfHarmDeathsHeatmap_rw2_allYears.png'),
+                plot = predictedSelfHarmDeathsHeatmap_rw2_allYears,
                 height = height, width = width)
 
-ggplot2::ggsave(filename = paste0(resultsDir, '/predictedSelfHarmDeathsHeatmap_zoom.png'),
-                plot = predictedSelfHarmDeathsHeatmap_zoom,
+ggplot2::ggsave(filename = paste0(resultsDir, '/predictedSelfHarmDeathsHeatmap_spline_25plus.png'),
+                plot = predictedSelfHarmDeathsHeatmap_spline_25plus,
                 height = height, width = width)
+ggplot2::ggsave(filename = paste0(resultsDir, '/predictedSelfHarmDeathsHeatmap_rw1_25plus.png'),
+                plot = predictedSelfHarmDeathsHeatmap_rw1_25plus,
+                height = height, width = width)
+ggplot2::ggsave(filename = paste0(resultsDir, '/predictedSelfHarmDeathsHeatmap_rw2_25plus.png'),
+                plot = predictedSelfHarmDeathsHeatmap_rw2_25plus,
+                height = height, width = width)
+
+#### direct comp ----
+
+splineVsRW1 <-
+  ggplot2::ggplot(selfHarmResultsWide, aes(x = yHat_Spline, y = yHat_RW1)) +
+  ggplot2::geom_abline(aes(intercept = 0, slope = 1), colour = 'red3', linetype = 'dotted') +
+  ggplot2::geom_point() +
+  my.theme(); splineVsRW1
+
+splineVsRW2 <-
+  ggplot2::ggplot(selfHarmResultsWide, aes(x = yHat_Spline, y = yHat_RW2)) +
+  ggplot2::geom_abline(aes(intercept = 0, slope = 1), colour = 'red3', linetype = 'dotted') +
+  ggplot2::geom_point() +
+  my.theme(); splineVsRW2
+
+RW2VsRW1 <-
+  ggplot2::ggplot(selfHarmResultsWide, aes(x = yHat_RW2, y = yHat_RW1)) +
+  ggplot2::geom_abline(aes(intercept = 0, slope = 1), colour = 'red3', linetype = 'dotted') +
+  ggplot2::geom_point() +
+  my.theme(); RW2VsRW1
 
 
 #### line plots ----
 
 predictedSelfHarmDeathsLine_all <-
-  ggplot2::ggplot(data = selfHarmResults, aes(x = period, group = interaction(Age_Group, model), color = model)) +
-  ggplot2::geom_vline(aes(xintercept = 2021), color = 'red3', linetype = 'dotted') +
-  ggplot2::geom_line(aes(y = yHat)) + 
-  ggplot2:: geom_line(aes(y = lower), linetype = 'dashed') + 
-  ggplot2:: geom_line(aes(y = upper), linetype = 'dashed') +
+  ggplot2::ggplot(data = selfHarmResults, aes(x = period)) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
+  ggplot2::geom_line(aes(y = yHat, color = model)) + 
+  ggplot2:: geom_line(aes(y = lower, color = model), linetype = 'dashed') + 
+  ggplot2:: geom_line(aes(y = upper, color = model), linetype = 'dashed') +
+  ggplot2::geom_point(data = selfHarmDataAll, aes(y = log(y/N))) +
   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
   ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
   ggplot2::scale_colour_manual(values = c('green4', 'blue3', 'purple3')) + 
@@ -458,11 +620,12 @@ predictedSelfHarmDeathsLine_all <-
            axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedSelfHarmDeathsLine_all
 
 predictedSelfHarmDeathsLine_last4 <-
-  ggplot2::ggplot(data = selfHarmResults %>% dplyr::filter(age > 64), aes(x = period, group = interaction(Age_Group, model), color = model)) +
-  ggplot2::geom_vline(aes(xintercept = 2021), color = 'red3', linetype = 'dotted') +
-  ggplot2::geom_line(aes(y = yHat)) + 
-  ggplot2:: geom_line(aes(y = lower), linetype = 'dashed') + 
-  ggplot2:: geom_line(aes(y = upper), linetype = 'dashed') +
+  ggplot2::ggplot(data = selfHarmResults %>% dplyr::filter(age > 64), aes(x = period)) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted') +
+  ggplot2::geom_line(aes(y = yHat, color = model)) + 
+  ggplot2:: geom_line(aes(y = lower, color = model), linetype = 'dashed') + 
+  ggplot2:: geom_line(aes(y = upper, color = model), linetype = 'dashed') +
+  ggplot2::geom_point(data = selfHarmDataAll %>% dplyr::filter(age > 64), aes(y = log(y/N))) +
   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
   ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
   ggplot2::scale_colour_manual(values = c('green4', 'blue3', 'purple3')) + 
