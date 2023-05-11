@@ -79,17 +79,17 @@ for(i in 1:nSims){
   ### cr basis
   crSpline[,i] <- spline.estimates(dataEst = dataEst_spline, dataPred = dataPred_spline,
                                    mod = 'apc', slopeDrop = 'c', bs = 'cr',
-                                   knots = list(age = 5, period = 5, cohort = 8),
+                                   knots = list(age = 10, period = 10, cohort = 12),
                                    fixed = list(age = F, period = F, cohort = F))
   ### bs
   bsSpline[,i] <- spline.estimates(dataEst = dataEst_spline, dataPred = dataPred_spline,
                                    mod = 'apc', slopeDrop = 'c', bs = 'bs',
-                                   knots = list(age = 5, period = 5, cohort = 8),
+                                   knots = list(age = 10, period = 10, cohort = 12),
                                    fixed = list(age = F, period = F, cohort = F))
   ### ps
   psSpline[,i] <- spline.estimates(dataEst = dataEst_spline, dataPred = dataPred_spline,
                                    mod = 'apc', slopeDrop = 'c', bs = 'ps',
-                                   knots = list(age = 5, period = 5, cohort = 8),
+                                   knots = list(age = 10, period = 10, cohort = 12),
                                    fixed = list(age = F, period = F, cohort = F))
   ## random walk
   ### rw1
