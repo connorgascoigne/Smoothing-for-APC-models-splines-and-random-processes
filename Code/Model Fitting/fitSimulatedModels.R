@@ -123,11 +123,12 @@ final <-
   rbind(collect.results(simulationResults = eval(parse(text = allNames[1])), allData = allData, CI = CI, name = allNames[1]),
         collect.results(simulationResults = eval(parse(text = allNames[2])), allData = allData, CI = CI, name = allNames[2]),
         collect.results(simulationResults = eval(parse(text = allNames[3])), allData = allData, CI = CI, name = allNames[3]),
-        collect.results(simulationResults = eval(parse(text = allNames[4])), allData = allData, CI = CI, name = allNames[4]),
-        collect.results(simulationResults = eval(parse(text = allNames[5])), allData = allData, CI = CI, name = allNames[5]),
+        # collect.results(simulationResults = eval(parse(text = allNames[4])), allData = allData, CI = CI, name = allNames[4]),
+        # collect.results(simulationResults = eval(parse(text = allNames[5])), allData = allData, CI = CI, name = allNames[5]),
         collect.results(simulationResults = eval(parse(text = allNames[6])), allData = allData, CI = CI, name = allNames[6]),
         collect.results(simulationResults = eval(parse(text = allNames[7])), allData = allData, CI = CI, name = allNames[7])) %>% 
-  dplyr::mutate(model = model %>% factor(., levels = allNames))
+  dplyr::mutate(model = model %>% factor(., levels = allNames),
+                type = type %>% factor(., levels = c('estimate', 'prediction'), labels = c('Estimation', 'In-sample prediction')))
 
 ggplot2::ggplot(data = final %>% dplyr::filter(period > 2017), aes(x = age)) +
   ggplot2::geom_line(aes(y = median, group = interaction(model, period),  colour = model), linetype = 'dashed') +
@@ -140,25 +141,25 @@ ggplot2::ggplot(data = final %>% dplyr::filter(period > 2017), aes(x = age)) +
   ggplot2::facet_wrap(~ as.factor(period)) +
   my.theme(legend.title = element_blank())
 
-biasBP <- 
-  ggplot2::ggplot(data = final, aes(x = model, y = bias, col = model, fill = model)) +
+maeBP <- 
+  ggplot2::ggplot(data = final, aes(x = model, y = mae, col = model, fill = model)) +
   ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dashed') +
   ggplot2::geom_boxplot(alpha = 0.2) +
-  ggplot2::labs(x = '', y = 'Bias') +
+  ggplot2::labs(x = '', y = 'Mean Absolute Error') +
   ggplot2::facet_grid(~ type) +
   my.theme(text = element_text(size = textSize),
            legend.title = element_blank(),
-           axis.text.x = element_blank())
+           axis.text.x = element_blank()); maeBP
 
 mseBP <- 
   ggplot2::ggplot(data = final, aes(x = model, y = mse, col = model, fill = model)) +
   ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dashed') +
   ggplot2::geom_boxplot(alpha = 0.2) +
-  ggplot2::labs(x = '', y = 'MSE') +
+  ggplot2::labs(x = '', y = 'Mean Square Error') +
   ggplot2::facet_grid(~ type) +
   my.theme(text = element_text(size = textSize),
            legend.title = element_blank(),
-           axis.text.x = element_blank())
+           axis.text.x = element_blank()); mseBP
 
 
 ggplot2::ggsave(filename = paste0(resultsDir, '/biasBP.png'),
