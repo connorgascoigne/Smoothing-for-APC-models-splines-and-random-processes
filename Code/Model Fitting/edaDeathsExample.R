@@ -144,54 +144,26 @@ alcoholData.randomWalkPredict <-
 
 #### spline ----
 
-crSplineFit <- 
-  spline.real.fit(dataEst = alcoholDataReduced, dataPred = alcoholData.splinePredict,
+splineFit <- 
+  spline.fit(dataEst = alcoholDataReduced, dataPred = alcoholData.splinePredict,
                    mod = 'apc', slopeDrop = 'c', bs = 'cr', 
                    knots = list(age = 10, period = 10, cohort = 12),
                    fixed = list(age = FALSE, period = FALSE, cohort = FALSE))
 
-bsSplineFit <- 
-  spline.real.fit(dataEst = alcoholDataReduced, dataPred = alcoholData.splinePredict,
-                  mod = 'apc', slopeDrop = 'c', bs = 'bs', 
-                  knots = list(age = 10, period = 10, cohort = 12),
-                  fixed = list(age = FALSE, period = FALSE, cohort = FALSE))
-
-psSplineFit <- 
-  spline.real.fit(dataEst = alcoholDataReduced, dataPred = alcoholData.splinePredict,
-                  mod = 'apc', slopeDrop = 'c', bs = 'ps', 
-                  knots = list(age = 10, period = 10, cohort = 12),
-                  fixed = list(age = FALSE, period = FALSE, cohort = FALSE))
-
 #### random walk ----
 
-rw1FitPC1 <- 
-  randomWalk.real.fit(data = alcoholData.randomWalkPredict,
+rw1Fit <- 
+  randomWalk.fit(data = alcoholData.randomWalkPredict,
                       mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
                       pc.u = 1, pc.alpha = 0.01,
                       control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
                       inla.mode = c('classic', 'twostage', 'experimental')[3],
                       control.compute = list(config = TRUE), verbose = FALSE)
 
-rw2FitPC1 <- 
-  randomWalk.real.fit(data = alcoholData.randomWalkPredict,
+rw2Fit <- 
+  randomWalk.fit(data = alcoholData.randomWalkPredict,
                       mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
                       pc.u = 1, pc.alpha = 0.01,
-                      control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-                      inla.mode = c('classic', 'twostage', 'experimental')[3],
-                      control.compute = list(config = TRUE), verbose = FALSE)
-
-rw1FitPC2 <- 
-  randomWalk.real.fit(data = alcoholData.randomWalkPredict,
-                      mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
-                      pc.u = 3, pc.alpha = 0.01,
-                      control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-                      inla.mode = c('classic', 'twostage', 'experimental')[3],
-                      control.compute = list(config = TRUE), verbose = FALSE)
-
-rw2FitPC2 <- 
-  randomWalk.real.fit(data = alcoholData.randomWalkPredict,
-                      mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
-                      pc.u = 3, pc.alpha = 0.01,
                       control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
                       inla.mode = c('classic', 'twostage', 'experimental')[3],
                       control.compute = list(config = TRUE), verbose = FALSE)
@@ -199,22 +171,10 @@ rw2FitPC2 <-
 
 ### results collecting ----
 
-# alcoholResults <- 
-#   rbind(crSplineFit %>% dplyr::select(-se) %>%  dplyr::mutate(model = 'CR spline'), 
-#         bsSplineFit %>% dplyr::select(-se) %>%  dplyr::mutate(model = 'BS spline'),
-#         psSplineFit %>% dplyr::select(-se) %>%  dplyr::mutate(model = 'PS spline'),
-#         rw1FitPC1 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW1: PC1'),
-#         rw2FitPC1 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW2: PC1'),
-#         rw1FitPC2 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW1: PC2'),
-#         rw2FitPC2 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW2: PC2')) %>% 
-#   dplyr::mutate(model = model %>% factor(., levels = c('CR spline', 'BS spline', 'PS spline',
-#                                                        'RW1: PC1', 'RW2: PC1', 'RW1: PC2', 'RW2: PC2'))) %>% 
-#   dplyr::left_join(., alcoholData %>% dplyr::select(Age_Group, age) %>% dplyr::distinct(), by = 'age')
-
 alcoholResults <-
-  rbind(crSplineFit %>% dplyr::select(-se) %>%  dplyr::mutate(model = 'Spline'),
-        rw1FitPC1 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW1'),
-        rw2FitPC1 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW2')) %>%
+  rbind(splineFit %>% dplyr::select(-se) %>%  dplyr::mutate(model = 'Spline'),
+        rw1Fit %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW1'),
+        rw2Fit %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW2')) %>%
   dplyr::mutate(model = model %>% factor(., levels = c('Spline', 'RW1', 'RW2'))) %>%
   dplyr::left_join(., alcoholDataAll %>% dplyr::select(Age_Group, age) %>% dplyr::distinct(), by = 'age')
 
@@ -344,7 +304,6 @@ predictedAlcoholDeathsLine_all <-
   ggplot2:: geom_line(aes(y = upper, color = model), linetype = 'dashed') +
   ggplot2::geom_point(data = alcoholDataAll, aes(y = log(y/N))) +
   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
-  ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
   ggplot2::scale_colour_manual(values = c('green4', 'blue3', 'purple3')) + 
   ggplot2::labs(y = 'Log-Rate', x = 'Period') +
   ggplot2::facet_wrap(~ Age_Group, scales = 'free') +
@@ -360,10 +319,9 @@ predictedAlcoholDeathsLine_last4 <-
   ggplot2:: geom_line(aes(y = upper, color = model), linetype = 'dashed') +
   ggplot2::geom_point(data = alcoholDataAll %>% dplyr::filter(age > 64), aes(y = log(y/N))) +
   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
-  ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
   ggplot2::scale_colour_manual(values = c('green4', 'blue3', 'purple3')) + 
   ggplot2::labs(y = 'Log-Rate', x = 'Period') +
-  ggplot2::facet_wrap(~ Age_Group, scales = 'free') +
+    ggplot2::facet_wrap(~ Age_Group, scales = 'free') +
   my.theme(legend.title = element_blank(),
            text = element_text(size = textSize),
            axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); predictedAlcoholDeathsLine_last4
@@ -412,54 +370,26 @@ selfHarmData.randomWalkPredict <-
 
 #### spline ----
 
-crSplineFit <- 
-  spline.real.fit(dataEst = selfHarmDataReduced, dataPred = selfHarmData.splinePredict,
+splineFit <- 
+  spline.fit(dataEst = selfHarmDataReduced, dataPred = selfHarmData.splinePredict,
                   mod = 'apc', slopeDrop = 'c', bs = 'cr', 
-                  knots = list(age = 10, period = 10, cohort = 12),
-                  fixed = list(age = FALSE, period = FALSE, cohort = FALSE))
-
-bsSplineFit <- 
-  spline.real.fit(dataEst = selfHarmDataReduced, dataPred = selfHarmData.splinePredict,
-                  mod = 'apc', slopeDrop = 'c', bs = 'bs', 
-                  knots = list(age = 10, period = 10, cohort = 12),
-                  fixed = list(age = FALSE, period = FALSE, cohort = FALSE))
-
-psSplineFit <- 
-  spline.real.fit(dataEst = selfHarmDataReduced, dataPred = selfHarmData.splinePredict,
-                  mod = 'apc', slopeDrop = 'c', bs = 'ps', 
                   knots = list(age = 10, period = 10, cohort = 12),
                   fixed = list(age = FALSE, period = FALSE, cohort = FALSE))
 
 #### random walk ----
 
-rw1FitPC1 <- 
-  randomWalk.real.fit(data = selfHarmData.randomWalkPredict,
+rw1Fit <- 
+  randomWalk.fit(data = selfHarmData.randomWalkPredict,
                       mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
                       pc.u = 1, pc.alpha = 0.01,
                       control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
                       inla.mode = c('classic', 'twostage', 'experimental')[3],
                       control.compute = list(config = TRUE), verbose = FALSE)
 
-rw2FitPC1 <- 
-  randomWalk.real.fit(data = selfHarmData.randomWalkPredict,
+rw2Fit <- 
+  randomWalk.fit(data = selfHarmData.randomWalkPredict,
                       mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
                       pc.u = 1, pc.alpha = 0.01,
-                      control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-                      inla.mode = c('classic', 'twostage', 'experimental')[3],
-                      control.compute = list(config = TRUE), verbose = FALSE)
-
-rw1FitPC2 <- 
-  randomWalk.real.fit(data = selfHarmData.randomWalkPredict,
-                      mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
-                      pc.u = 3, pc.alpha = 0.01,
-                      control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-                      inla.mode = c('classic', 'twostage', 'experimental')[3],
-                      control.compute = list(config = TRUE), verbose = FALSE)
-
-rw2FitPC2 <- 
-  randomWalk.real.fit(data = selfHarmData.randomWalkPredict,
-                      mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
-                      pc.u = 3, pc.alpha = 0.01,
                       control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
                       inla.mode = c('classic', 'twostage', 'experimental')[3],
                       control.compute = list(config = TRUE), verbose = FALSE)
@@ -468,11 +398,11 @@ rw2FitPC2 <-
 ### results collecting ----
 
 # selfHarmResults <- 
-#   rbind(crSplineFit %>% dplyr::select(-se) %>%  dplyr::mutate(model = 'CR spline'), 
+#   rbind(splineFit %>% dplyr::select(-se) %>%  dplyr::mutate(model = 'CR spline'), 
 #         bsSplineFit %>% dplyr::select(-se) %>%  dplyr::mutate(model = 'BS spline'),
 #         psSplineFit %>% dplyr::select(-se) %>%  dplyr::mutate(model = 'PS spline'),
-#         rw1FitPC1 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW1: PC1'),
-#         rw2FitPC1 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW2: PC1'),
+#         rw1Fit %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW1: PC1'),
+#         rw2Fit %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW2: PC1'),
 #         rw1FitPC2 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW1: PC2'),
 #         rw2FitPC2 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW2: PC2')) %>% 
 #   dplyr::mutate(model = model %>% factor(., levels = c('CR spline', 'BS spline', 'PS spline',
@@ -480,9 +410,9 @@ rw2FitPC2 <-
 #   dplyr::left_join(., selfHarmData %>% dplyr::select(Age_Group, age) %>% dplyr::distinct(), by = 'age')
 
 selfHarmResults <-
-  rbind(crSplineFit %>% dplyr::select(-se) %>%  dplyr::mutate(model = 'Spline'),
-        rw1FitPC1 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW1'),
-        rw2FitPC1 %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW2')) %>%
+  rbind(splineFit %>% dplyr::select(-se) %>%  dplyr::mutate(model = 'Spline'),
+        rw1Fit %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW1'),
+        rw2Fit %>% dplyr::select(-y, -N) %>% dplyr::mutate(model = 'RW2')) %>%
   dplyr::mutate(model = model %>% factor(., levels = c('Spline', 'RW1', 'RW2'))) %>%
   dplyr::left_join(., selfHarmDataAll %>% dplyr::select(Age_Group, age) %>% dplyr::distinct(), by = 'age')
 
