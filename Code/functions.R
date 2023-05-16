@@ -287,4 +287,42 @@ my.theme<-function(...){
         ...)
 }
 
-
+# collect simulation results
+collect.results <- function(simulationResults, allData, CI, name){
+  
+  # setting up
+  ## true
+  true <- 
+    allData[[1]] %>%
+    dplyr::select(age, period, cohort) %>%
+    dplyr::mutate(true = age.fun(age - mean(age)) + per.fun(period - mean(period)) + coh.fun(cohort - mean(cohort)))
+  ## number of sims
+  nSims <- length(allData)
+  
+  # lower and upper CI calculators
+  lowerCI <- (1 - CI)/2
+  upperCI <- 1 - lowerCI
+  
+  # colnames
+  colnames(simulationResults) <- paste0('theta:', 1:nSims) 
+  
+  # results
+  results <-
+    cbind(true , simulationResults) %>% 
+    dplyr::mutate(dplyr::select(., starts_with('theta:')) %>% 
+                    apply(., 1, my.summary, lowerCI = lowerCI, upperCI = upperCI) %>% 
+                    lapply(., data.frame) %>%
+                    do.call(rbind, .),
+                  mae = 
+                    dplyr::across(dplyr::starts_with('theta:'), ~  abs(. - true)) %>% 
+                    rowMeans(),
+                  mse = 
+                    dplyr::across(dplyr::starts_with('theta:'), ~  (. - true)^2) %>% 
+                    rowMeans(),
+                  model = name,
+                  type = dplyr::if_else(period > 2017, 'prediction', 'estimate')) %>%
+    dplyr::select(-starts_with('theta:'))
+  
+  results
+  
+}
