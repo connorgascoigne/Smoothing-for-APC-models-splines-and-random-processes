@@ -77,51 +77,51 @@ for(i in 1:nSims){
   # estimates
   ## spline
   ### cr basis
-  crSpline[,i] <- spline.estimates(dataEst = dataEst_spline, dataPred = dataPred_spline,
-                                   mod = 'apc', slopeDrop = 'c', bs = 'cr',
-                                   knots = list(age = 10, period = 10, cohort = 12),
-                                   fixed = list(age = F, period = F, cohort = F))
+  crSpline[,i] <- spline.fit(dataEst = dataEst_spline, dataPred = dataPred_spline,
+                             mod = 'apc', slopeDrop = 'c', bs = 'cr',
+                             knots = list(age = 10, period = 10, cohort = 12),
+                             fixed = list(age = F, period = F, cohort = F))$yHat
   ### bs
-  bsSpline[,i] <- spline.estimates(dataEst = dataEst_spline, dataPred = dataPred_spline,
-                                   mod = 'apc', slopeDrop = 'c', bs = 'bs',
-                                   knots = list(age = 10, period = 10, cohort = 12),
-                                   fixed = list(age = F, period = F, cohort = F))
+  bsSpline[,i] <- spline.fit(dataEst = dataEst_spline, dataPred = dataPred_spline,
+                             mod = 'apc', slopeDrop = 'c', bs = 'bs',
+                             knots = list(age = 10, period = 10, cohort = 12),
+                             fixed = list(age = F, period = F, cohort = F))$yHat
   ### ps
-  psSpline[,i] <- spline.estimates(dataEst = dataEst_spline, dataPred = dataPred_spline,
-                                   mod = 'apc', slopeDrop = 'c', bs = 'ps',
-                                   knots = list(age = 10, period = 10, cohort = 12),
-                                   fixed = list(age = F, period = F, cohort = F))
+  psSpline[,i] <- spline.fit(dataEst = dataEst_spline, dataPred = dataPred_spline,
+                             mod = 'apc', slopeDrop = 'c', bs = 'ps',
+                             knots = list(age = 10, period = 10, cohort = 12),
+                             fixed = list(age = F, period = F, cohort = F))$yHat
   ## random walk
   ### rw1
   #### pc1
-  rw1PC1[,i] <- randomWalk.estimates(dataPred = dataPred_randomWalk,
-                                     mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
-                                     pc.u = 1, pc.alpha = 0.01,
-                                     control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-                                     inla.mode = c('classic', 'twostage', 'experimental')[3],
-                                     control.compute = list(config = TRUE), verbose = FALSE)
+  rw1PC1[,i] <- randomWalk.fit(data = dataPred_randomWalk,
+                               mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
+                               pc.u = 1, pc.alpha = 0.01,
+                               control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
+                               inla.mode = c('classic', 'twostage', 'experimental')[3],
+                               control.compute = list(config = TRUE), verbose = FALSE)$yHat
   #### pc2
-  rw1PC2[,i] <- randomWalk.estimates(dataPred = dataPred_randomWalk,
-                                     mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
-                                     pc.u = 3, pc.alpha = 0.01,
-                                     control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-                                     inla.mode = c('classic', 'twostage', 'experimental')[3],
-                                     control.compute = list(config = TRUE), verbose = FALSE)
+  rw1PC2[,i] <- randomWalk.fit(data = dataPred_randomWalk,
+                               mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
+                               pc.u = 3, pc.alpha = 0.01,
+                               control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
+                               inla.mode = c('classic', 'twostage', 'experimental')[3],
+                               control.compute = list(config = TRUE), verbose = FALSE)$yHat
   ### rw2
   #### pc1
-  rw2PC1[,i] <- randomWalk.estimates(dataPred = dataPred_randomWalk,
-                                     mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
-                                     pc.u = 1, pc.alpha = 0.01,
-                                     control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-                                     inla.mode = c('classic', 'twostage', 'experimental')[3],
-                                     control.compute = list(config = TRUE), verbose = FALSE)
+  rw2PC1[,i] <- randomWalk.fit(data = dataPred_randomWalk,
+                               mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
+                               pc.u = 1, pc.alpha = 0.01,
+                               control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
+                               inla.mode = c('classic', 'twostage', 'experimental')[3],
+                               control.compute = list(config = TRUE), verbose = FALSE)$yHat
   #### pc2
-  rw2PC2[,i] <- randomWalk.estimates(dataPred = dataPred_randomWalk,
-                                     mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
-                                     pc.u = 3, pc.alpha = 0.01,
-                                     control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-                                     inla.mode = c('classic', 'twostage', 'experimental')[3],
-                                     control.compute = list(config = TRUE), verbose = FALSE)
+  rw2PC2[,i] <- randomWalk.fit(data = dataPred_randomWalk,
+                               mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
+                               pc.u = 3, pc.alpha = 0.01,
+                               control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
+                               inla.mode = c('classic', 'twostage', 'experimental')[3],
+                               control.compute = list(config = TRUE), verbose = FALSE)$yHat
   
   print(i)
   
@@ -172,7 +172,7 @@ mseBP <-
   ggplot2::ggplot(data = final, aes(x = model, y = mse, col = model, fill = model)) +
   ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dashed') +
   ggplot2::geom_boxplot(alpha = 0.2) +
-  ggplot2::labs(x = '', y = 'Bias') +
+  ggplot2::labs(x = '', y = 'MSE') +
   ggplot2::facet_grid(~ type) +
   my.theme(text = element_text(size = textSize),
            legend.title = element_blank(),
