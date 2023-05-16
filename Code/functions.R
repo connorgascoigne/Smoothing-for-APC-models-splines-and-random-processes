@@ -62,7 +62,7 @@ data.sim <- function(age = NULL, period = NULL,
 ## spline ----
 
 spline.fit <-
-  function(dataEst, dataPred, mod = c('apc','ac','ap','pc','a','p','c')[1],
+  function(data, predictFrom, mod = c('apc','ac','ap','pc','a','p','c')[1],
            bs = NULL, knots = NULL, fixed = NULL, slopeDrop = NULL){
     
     # # inputs to run all parts of the function
@@ -70,6 +70,7 @@ spline.fit <-
     # M = 5;
     # data = data.sim(age = age, period = period, N = N, M = M,
     #                 FUNage = age.fun,  FUNperiod = per.fun, FUNcohort = coh.fun)
+    # predictFrom = 2017
     # mod = 'apc'; slopeDrop = 'c'; bs = 'cr'
     # knots = list(age = 5, period = 5, cohort = 8)
     # fixed = list(age = F,period = F,cohort = F)
@@ -79,6 +80,10 @@ spline.fit <-
     if(is.null(fixed)|!is.null(fixed) & !is.list(fixed)) stop('Warning: Need a list for whether an effect is penalised or not.')
     if(mod == 'apc'&&is.null(slopeDrop)) stop('Warning: When fitting an APC model need to drop linear column of one of age (a), period (p) or cohort (c).')
     if(mod == 'apc'&&!(slopeDrop %in% c('a', 'p', 'c'))) stop('slopeDrop needs to be one of a, p or c')
+    
+    dataEst <- 
+      data %>% 
+      dplyr::filter(period %in% min(data$period):predictFrom)
     
     # if data needs additional changes
     ## center data
@@ -131,7 +136,7 @@ spline.fit <-
     
     # need to match the naming convention in spline.fit()
     dataPred2 <-
-      dataPred %>%
+      data %>% 
       dplyr::mutate(age_id = age %>% as.factor() %>% as.numeric(),
                     period_id = period %>% as.factor() %>% as.numeric(),
                     cohort_id = cohort %>% as.factor() %>% as.numeric())
@@ -139,7 +144,8 @@ spline.fit <-
     prediction <- predict(object = fit, newdata = dataPred2, type = 'link', se.fit = TRUE)
     
     results <-
-      dataPred %>%
+      data %>%
+      dplyr::select(age, period, cohort) %>% 
       dplyr::mutate(yHat = prediction$fit %>% as.vector(),
                     se = prediction$se.fit %>% as.vector()) %>%
       dplyr::rowwise() %>%
@@ -154,7 +160,7 @@ spline.fit <-
 ## random walk ----
 
 randomWalk.fit <-
-  function(data, mod = c('apc', 'ac', 'ap', 'pc', 'a', 'p', 'c')[1],
+  function(data, predictFrom, mod = c('apc', 'ac', 'ap', 'pc', 'a', 'p', 'c')[1],
            randomWalk = c('rw1', 'rw2')[2],
            slopeDrop = NULL,
            pc.u = 1, pc.alpha = 0.01,
@@ -180,13 +186,14 @@ randomWalk.fit <-
     
     # data augmentation
     data2 <-
-      data %>%
+      data %>% 
       dplyr::mutate(age_id = age %>% as.factor() %>% as.numeric(),
                     period_id = period %>% as.factor() %>% as.numeric(),
                     cohort_id = cohort %>% as.factor() %>% as.numeric(),
                     age2_id = age_id,
                     period2_id = period_id,
-                    cohort2_id = cohort_id)
+                    cohort2_id = cohort_id) %>% 
+      dplyr::mutate(y = dplyr::if_else(period > predictFrom, NA, y))
     
     # define the formula for INLA
     # pc hyper priors
