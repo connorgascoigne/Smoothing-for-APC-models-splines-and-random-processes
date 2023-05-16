@@ -56,52 +56,34 @@ crSpline <-
 
 for(i in 1:nSims){
   
-  # full data
-  dataFull <- allData[[i]]
-  
-  # data for spline estimate function
-  ## estimates
-  dataEst_spline <- 
-    dataFull %>% 
-    dplyr::filter(period %in% 2000:2017)
-  ## prediction
-  dataPred_spline <-
-    dataFull %>% 
-    dplyr::select(age, period, cohort)
-  
-  # data for random walk estimate function
-  dataPred_randomWalk <-
-    dataFull %>% 
-    dplyr::mutate(y = dplyr::if_else(period > 2017, NA, y))
-  
   # estimates
   ## spline
   ### cr basis
-  crSpline[,i] <- spline.fit(dataEst = dataEst_spline, dataPred = dataPred_spline,
+  crSpline[,i] <- spline.fit(data = allData[[i]], predictFrom = 2017,
                              mod = 'apc', slopeDrop = 'c', bs = 'cr',
                              knots = list(age = 10, period = 10, cohort = 12),
                              fixed = list(age = F, period = F, cohort = F))$yHat
   ### bs
-  bsSpline[,i] <- spline.fit(dataEst = dataEst_spline, dataPred = dataPred_spline,
+  bsSpline[,i] <- spline.fit(data = allData[[i]], predictFrom = 2017,
                              mod = 'apc', slopeDrop = 'c', bs = 'bs',
                              knots = list(age = 10, period = 10, cohort = 12),
                              fixed = list(age = F, period = F, cohort = F))$yHat
   ### ps
-  psSpline[,i] <- spline.fit(dataEst = dataEst_spline, dataPred = dataPred_spline,
+  psSpline[,i] <- spline.fit(data = allData[[i]], predictFrom = 2017,
                              mod = 'apc', slopeDrop = 'c', bs = 'ps',
                              knots = list(age = 10, period = 10, cohort = 12),
                              fixed = list(age = F, period = F, cohort = F))$yHat
   ## random walk
   ### rw1
   #### pc1
-  rw1PC1[,i] <- randomWalk.fit(data = dataPred_randomWalk,
+  rw1PC1[,i] <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
                                mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
                                pc.u = 1, pc.alpha = 0.01,
                                control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
                                inla.mode = c('classic', 'twostage', 'experimental')[3],
                                control.compute = list(config = TRUE), verbose = FALSE)$yHat
   #### pc2
-  rw1PC2[,i] <- randomWalk.fit(data = dataPred_randomWalk,
+  rw1PC2[,i] <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
                                mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
                                pc.u = 3, pc.alpha = 0.01,
                                control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
@@ -109,14 +91,14 @@ for(i in 1:nSims){
                                control.compute = list(config = TRUE), verbose = FALSE)$yHat
   ### rw2
   #### pc1
-  rw2PC1[,i] <- randomWalk.fit(data = dataPred_randomWalk,
+  rw2PC1[,i] <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
                                mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
                                pc.u = 1, pc.alpha = 0.01,
                                control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
                                inla.mode = c('classic', 'twostage', 'experimental')[3],
                                control.compute = list(config = TRUE), verbose = FALSE)$yHat
   #### pc2
-  rw2PC2[,i] <- randomWalk.fit(data = dataPred_randomWalk,
+  rw2PC2[,i] <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
                                mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
                                pc.u = 3, pc.alpha = 0.01,
                                control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
