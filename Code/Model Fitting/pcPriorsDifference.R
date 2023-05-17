@@ -26,7 +26,7 @@ resultsDir <- paste0(codeDir, '/Results')
 # saving format ----
 
 height <- width <- 10
-textSize <- 17.5
+textSize <- 20
 
 # load ----
 
@@ -58,7 +58,7 @@ results <-
 pcPriorsPlot <- 
   ggplot2::ggplot(data = results, aes(x = allSD, y = sd, group = U, colour = U, linetype = U)) +
   ggplot2::geom_line() +
-  ggplot2::labs(x = 'Standard Deviation', y = '') +
+  ggplot2::labs(x = 'Standard Deviation', y = 'Density') +
   ggplot2::scale_color_manual(values = c('red3', 'blue3', 'green4'),
                               labels = 
                                 c(latex2exp::TeX(r'($\alpha = 0.01 \ and \ U = 1$)'), 
