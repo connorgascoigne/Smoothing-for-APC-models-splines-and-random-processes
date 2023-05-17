@@ -63,9 +63,9 @@ allResults <- foreach::foreach(
                          mod = 'apc', slopeDrop = 'c', bs = 'bs',
                          knots = list(age = 10, period = 10, cohort = 12),
                          fixed = list(age = F, period = F, cohort = F))$yHat
-  # ps spline basis
-  psSpline <- spline.fit(data = allData[[i]], predictFrom = 2017,
-                         mod = 'apc', slopeDrop = 'c', bs = 'ps',
+  # tp spline basis
+  tpSpline <- spline.fit(data = allData[[i]], predictFrom = 2017,
+                         mod = 'apc', slopeDrop = 'c', bs = 'tp',
                          knots = list(age = 10, period = 10, cohort = 12),
                          fixed = list(age = F, period = F, cohort = F))$yHat
   # rw2 U = 1
@@ -93,7 +93,7 @@ allResults <- foreach::foreach(
   
   list(crSpline = crSpline, 
        bsSpline = bsSpline, 
-       psSpline = psSpline,
+       tpSpline = tpSpline,
        rw2PC1 = rw2PC1, 
        rw2PC2 = rw2PC2, 
        rw2PC3 = rw2PC3)
@@ -108,11 +108,11 @@ CI <- 0.95
 final <- 
   rbind(collect.results(simulationResults = sapply(allResults, `[[`, 'crSpline'), allData = allData, CI = CI, name = 'crSpline'),
         collect.results(simulationResults = sapply(allResults, `[[`, 'bsSpline'), allData = allData, CI = CI, name = 'bsSpline'),
-        collect.results(simulationResults = sapply(allResults, `[[`, 'psSpline'), allData = allData, CI = CI, name = 'psSpline'),
+        collect.results(simulationResults = sapply(allResults, `[[`, 'tpSpline'), allData = allData, CI = CI, name = 'tpSpline'),
         collect.results(simulationResults = sapply(allResults, `[[`, 'rw2PC1'), allData = allData, CI = CI, name = 'rw2PC1'),
         collect.results(simulationResults = sapply(allResults, `[[`, 'rw2PC2'), allData = allData, CI = CI, name = 'rw2PC2'),
         collect.results(simulationResults = sapply(allResults, `[[`, 'rw2PC3'), allData = allData, CI = CI, name = 'rw2PC3')) %>% 
-  dplyr::mutate(model = model %>% factor(., levels = c('crSpline', 'bsSpline', 'psSpline', 'rw2PC1', 'rw2PC2', 'rw2PC3')),
+  dplyr::mutate(model = model %>% factor(., levels = c('crSpline', 'bsSpline', 'tpSpline', 'rw2PC1', 'rw2PC2', 'rw2PC3')),
                 type = type %>% factor(., levels = c('estimate', 'prediction'), labels = c('Estimation', 'In-sample prediction')))
 
 # results ----
@@ -151,51 +151,119 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/mseBP.png'),
 ## interval scoring metric ----
 
 # average log-rate for data generated
-true_logRate <- log(sapply(allData, `[[`, 'y')/sapply(allData, `[[`, 'N')) %>% rowMeans()
-# upper and lower for each model
-## cr spline
-crSpline_lower <- final %>% dplyr::filter(model == 'crSpline') %>% dplyr::pull(lower)
-crSpline_upper <- final %>% dplyr::filter(model == 'crSpline') %>% dplyr::pull(upper)
-## bs spline
-bsSpline_lower <- final %>% dplyr::filter(model == 'bsSpline') %>% dplyr::pull(lower)
-bsSpline_upper <- final %>% dplyr::filter(model == 'bsSpline') %>% dplyr::pull(upper)
-## ps spline
-psSpline_lower <- final %>% dplyr::filter(model == 'psSpline') %>% dplyr::pull(lower)
-psSpline_upper <- final %>% dplyr::filter(model == 'psSpline') %>% dplyr::pull(upper)
-## rw2
-rw2PC1_lower <- final %>% dplyr::filter(model == 'rw2PC1') %>% dplyr::pull(lower)
-rw2PC1_upper <- final %>% dplyr::filter(model == 'rw2PC1') %>% dplyr::pull(upper)
-rw2PC2_lower <- final %>% dplyr::filter(model == 'rw2PC2') %>% dplyr::pull(lower)
-rw2PC2_upper <- final %>% dplyr::filter(model == 'rw2PC2') %>% dplyr::pull(upper)
-rw2PC3_lower <- final %>% dplyr::filter(model == 'rw2PC3') %>% dplyr::pull(lower)
-rw2PC3_upper <- final %>% dplyr::filter(model == 'rw2PC3') %>% dplyr::pull(upper)
+averageData <- 
+  data.frame(age = sapply(allData, `[[`, 'age') %>% rowMeans(),
+             period = sapply(allData, `[[`, 'period') %>% rowMeans(),
+             cohort = sapply(allData, `[[`, 'cohort') %>% rowMeans(),
+             y = sapply(allData, `[[`, 'y') %>% rowMeans(),
+             N = sapply(allData, `[[`, 'N') %>% rowMeans()) %>% 
+  dplyr::mutate(logRate = log(y/N))
+true_logRate_estimate <- averageData %>% dplyr::filter(period <= 2017) %>% dplyr::pull(logRate)
+true_logRate_inSamplePredcition <- averageData %>% dplyr::filter(period > 2017) %>% dplyr::pull(logRate)
 
-crSplineScore <- interval.score(lower = crSpline_lower, upper = crSpline_upper, true = true_logRate, alpha = (1-CI))
-bsSplineScore <- interval.score(lower = bsSpline_lower, upper = bsSpline_upper, true = true_logRate, alpha = (1-CI))
-psSplineScore <- interval.score(lower = psSpline_lower, upper = psSpline_upper, true = true_logRate, alpha = (1-CI))
-rw2PC1Score <- interval.score(lower = rw2PC1_lower, upper = rw2PC1_upper, true = true_logRate, alpha = (1-CI))
-rw2PC2Score <- interval.score(lower = rw2PC2_lower, upper = rw2PC2_upper, true = true_logRate, alpha = (1-CI))
-rw2PC3Score <- interval.score(lower = rw2PC3_lower, upper = rw2PC3_upper, true = true_logRate, alpha = (1-CI))
+# estimation
+## cr spline
+crSpline_lower_estimate <- final %>% dplyr::filter(model == 'crSpline', type == 'Estimation') %>% dplyr::pull(lower)
+crSpline_upper_estimate <- final %>% dplyr::filter(model == 'crSpline', type == 'Estimation') %>% dplyr::pull(upper)
+## bs spline
+bsSpline_lower_estimate <- final %>% dplyr::filter(model == 'bsSpline', type == 'Estimation') %>% dplyr::pull(lower)
+bsSpline_upper_estimate <- final %>% dplyr::filter(model == 'bsSpline', type == 'Estimation') %>% dplyr::pull(upper)
+## tp spline
+tpSpline_lower_estimate <- final %>% dplyr::filter(model == 'tpSpline', type == 'Estimation') %>% dplyr::pull(lower)
+tpSpline_upper_estimate <- final %>% dplyr::filter(model == 'tpSpline', type == 'Estimation') %>% dplyr::pull(upper)
+## rw2 U = 1
+rw2PC1_lower_estimate <- final %>% dplyr::filter(model == 'rw2PC1', type == 'Estimation') %>% dplyr::pull(lower)
+rw2PC1_upper_estimate <- final %>% dplyr::filter(model == 'rw2PC1', type == 'Estimation') %>% dplyr::pull(upper)
+## rw2 U = 3
+rw2PC2_lower_estimate <- final %>% dplyr::filter(model == 'rw2PC2', type == 'Estimation') %>% dplyr::pull(lower)
+rw2PC2_upper_estimate <- final %>% dplyr::filter(model == 'rw2PC2', type == 'Estimation') %>% dplyr::pull(upper)
+## rw2 U = 6
+rw2PC3_lower_estimate <- final %>% dplyr::filter(model == 'rw2PC3', type == 'Estimation') %>% dplyr::pull(lower)
+rw2PC3_upper_estimate <- final %>% dplyr::filter(model == 'rw2PC3', type == 'Estimation') %>% dplyr::pull(upper)
+## scores
+crSplineScore_estimate <- interval.score(lower = crSpline_lower_estimate, upper = crSpline_upper_estimate, true = true_logRate_estimate, alpha = (1-CI))
+bsSplineScore_estimate <- interval.score(lower = bsSpline_lower_estimate, upper = bsSpline_upper_estimate, true = true_logRate_estimate, alpha = (1-CI))
+tpSplineScore_estimate <- interval.score(lower = tpSpline_lower_estimate, upper = tpSpline_upper_estimate, true = true_logRate_estimate, alpha = (1-CI))
+rw2PC1Score_estimate <- interval.score(lower = rw2PC1_lower_estimate, upper = rw2PC1_upper_estimate, true = true_logRate_estimate, alpha = (1-CI))
+rw2PC2Score_estimate <- interval.score(lower = rw2PC2_lower_estimate, upper = rw2PC2_upper_estimate, true = true_logRate_estimate, alpha = (1-CI))
+rw2PC3Score_estimate <- interval.score(lower = rw2PC3_lower_estimate, upper = rw2PC3_upper_estimate, true = true_logRate_estimate, alpha = (1-CI))
+
+# in-sample prediction
+## cr spline
+crSpline_lower_inSamplePredcition <- final %>% dplyr::filter(model == 'crSpline', type == 'In-sample prediction') %>% dplyr::pull(lower)
+crSpline_upper_inSamplePredcition <- final %>% dplyr::filter(model == 'crSpline', type == 'In-sample prediction') %>% dplyr::pull(upper)
+## bs spline
+bsSpline_lower_inSamplePredcition <- final %>% dplyr::filter(model == 'bsSpline', type == 'In-sample prediction') %>% dplyr::pull(lower)
+bsSpline_upper_inSamplePredcition <- final %>% dplyr::filter(model == 'bsSpline', type == 'In-sample prediction') %>% dplyr::pull(upper)
+## tp spline
+tpSpline_lower_inSamplePredcition <- final %>% dplyr::filter(model == 'tpSpline', type == 'In-sample prediction') %>% dplyr::pull(lower)
+tpSpline_upper_inSamplePredcition <- final %>% dplyr::filter(model == 'tpSpline', type == 'In-sample prediction') %>% dplyr::pull(upper)
+## rw2 U = 1
+rw2PC1_lower_inSamplePredcition <- final %>% dplyr::filter(model == 'rw2PC1', type == 'In-sample prediction') %>% dplyr::pull(lower)
+rw2PC1_upper_inSamplePredcition <- final %>% dplyr::filter(model == 'rw2PC1', type == 'In-sample prediction') %>% dplyr::pull(upper)
+## rw2 U = 3
+rw2PC2_lower_inSamplePredcition <- final %>% dplyr::filter(model == 'rw2PC2', type == 'In-sample prediction') %>% dplyr::pull(lower)
+rw2PC2_upper_inSamplePredcition <- final %>% dplyr::filter(model == 'rw2PC2', type == 'In-sample prediction') %>% dplyr::pull(upper)
+## rw2 U = 6
+rw2PC3_lower_inSamplePredcition <- final %>% dplyr::filter(model == 'rw2PC3', type == 'In-sample prediction') %>% dplyr::pull(lower)
+rw2PC3_upper_inSamplePredcition <- final %>% dplyr::filter(model == 'rw2PC3', type == 'In-sample prediction') %>% dplyr::pull(upper)
+## scores
+crSplineScore_inSamplePredcition <- interval.score(lower = crSpline_lower_inSamplePredcition, upper = crSpline_upper_inSamplePredcition, true = true_logRate_inSamplePredcition, alpha = (1-CI))
+bsSplineScore_inSamplePredcition <- interval.score(lower = bsSpline_lower_inSamplePredcition, upper = bsSpline_upper_inSamplePredcition, true = true_logRate_inSamplePredcition, alpha = (1-CI))
+tpSplineScore_inSamplePredcition <- interval.score(lower = tpSpline_lower_inSamplePredcition, upper = tpSpline_upper_inSamplePredcition, true = true_logRate_inSamplePredcition, alpha = (1-CI))
+rw2PC1Score_inSamplePredcition <- interval.score(lower = rw2PC1_lower_inSamplePredcition, upper = rw2PC1_upper_inSamplePredcition, true = true_logRate_inSamplePredcition, alpha = (1-CI))
+rw2PC2Score_inSamplePredcition <- interval.score(lower = rw2PC2_lower_inSamplePredcition, upper = rw2PC2_upper_inSamplePredcition, true = true_logRate_inSamplePredcition, alpha = (1-CI))
+rw2PC3Score_inSamplePredcition <- interval.score(lower = rw2PC3_lower_inSamplePredcition, upper = rw2PC3_upper_inSamplePredcition, true = true_logRate_inSamplePredcition, alpha = (1-CI))
+
+
+
+estimateScores <- 
+  data.frame(model = c('crSpline', 'bsSpline', 'tpSpline', 'rw2PC1', 'rw2PC2', 'rw2PC3'),
+             averageScore = c(crSplineScore_estimate$averageScore,
+                              bsSplineScore_estimate$averageScore,
+                              tpSplineScore_estimate$averageScore,
+                              rw2PC1Score_estimate$averageScore,
+                              rw2PC2Score_estimate$averageScore,
+                              rw2PC3Score_estimate$averageScore),
+             averageWidth = c(crSplineScore_estimate$averageWidth,
+                              bsSplineScore_estimate$averageWidth,
+                              tpSplineScore_estimate$averageWidth,
+                              rw2PC1Score_estimate$averageWidth,
+                              rw2PC2Score_estimate$averageWidth,
+                              rw2PC3Score_estimate$averageWidth),
+             coverage = c(crSplineScore_estimate$coverage,
+                          bsSplineScore_estimate$coverage,
+                          tpSplineScore_estimate$coverage,
+                          rw2PC1Score_estimate$coverage,
+                          rw2PC2Score_estimate$coverage,
+                          rw2PC3Score_estimate$coverage)) %>% 
+  dplyr::mutate(across(-model, ~ round(.x * 100, digits = 2)))
+
+
+inSamplePredictionScores <- 
+  data.frame(model = c('crSpline', 'bsSpline', 'tpSpline', 'rw2PC1', 'rw2PC2', 'rw2PC3'),
+             averageScore = c(crSplineScore_inSamplePredcition$averageScore,
+                              bsSplineScore_inSamplePredcition$averageScore,
+                              tpSplineScore_inSamplePredcition$averageScore,
+                              rw2PC1Score_inSamplePredcition$averageScore,
+                              rw2PC2Score_inSamplePredcition$averageScore,
+                              rw2PC3Score_inSamplePredcition$averageScore),
+             averageWidth = c(crSplineScore_inSamplePredcition$averageWidth,
+                              bsSplineScore_inSamplePredcition$averageWidth,
+                              tpSplineScore_inSamplePredcition$averageWidth,
+                              rw2PC1Score_inSamplePredcition$averageWidth,
+                              rw2PC2Score_inSamplePredcition$averageWidth,
+                              rw2PC3Score_inSamplePredcition$averageWidth),
+             coverage = c(crSplineScore_inSamplePredcition$coverage,
+                          bsSplineScore_inSamplePredcition$coverage,
+                          tpSplineScore_inSamplePredcition$coverage,
+                          rw2PC1Score_inSamplePredcition$coverage,
+                          rw2PC2Score_inSamplePredcition$coverage,
+                          rw2PC3Score_inSamplePredcition$coverage)) %>% 
+  dplyr::mutate(across(-model, ~ round(.x * 100, digits = 2)))
+
 
 allScores <- 
-  data.frame(model = c('crSpline', 'bsSpline', 'psSpline', 'rw2PC1', 'rw2PC2', 'rw2PC3'),
-             averageScore = c(crSplineScore$averageScore,
-                              bsSplineScore$averageScore,
-                              psSplineScore$averageScore,
-                              rw2PC1Score$averageScore,
-                              rw2PC2Score$averageScore,
-                              rw2PC3Score$averageScore),
-             averageWidth = c(crSplineScore$averageWidth,
-                              bsSplineScore$averageWidth,
-                              psSplineScore$averageWidth,
-                              rw2PC1Score$averageWidth,
-                              rw2PC2Score$averageWidth,
-                              rw2PC3Score$averageWidth),
-             coverage = c(crSplineScore$coverage,
-                          bsSplineScore$coverage,
-                          psSplineScore$coverage,
-                          rw2PC1Score$coverage,
-                          rw2PC2Score$coverage,
-                          rw2PC3Score$coverage))
-
-print(xtable::xtable(allScores), include.rownames = FALSE)
+  cbind(estimateScores %>% dplyr::mutate(type = 'Estimation'),
+        inSamplePredictionScores %>% dplyr::mutate(type = 'In-sample prediction'))
+print(xtable::xtable(allScores[,c(1:4,7:9)]), include.rownames = FALSE)
