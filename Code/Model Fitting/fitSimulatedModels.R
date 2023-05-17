@@ -151,15 +151,17 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/mseBP.png'),
 ## interval scoring metric ----
 
 # average log-rate for data generated
-averageData <- 
-  data.frame(age = sapply(allData, `[[`, 'age') %>% rowMeans(),
-             period = sapply(allData, `[[`, 'period') %>% rowMeans(),
-             cohort = sapply(allData, `[[`, 'cohort') %>% rowMeans(),
-             y = sapply(allData, `[[`, 'y') %>% rowMeans(),
-             N = sapply(allData, `[[`, 'N') %>% rowMeans()) %>% 
-  dplyr::mutate(logRate = log(y/N))
-true_logRate_estimate <- averageData %>% dplyr::filter(period <= 2017) %>% dplyr::pull(logRate)
-true_logRate_inSamplePredcition <- averageData %>% dplyr::filter(period > 2017) %>% dplyr::pull(logRate)
+trueData <- 
+  expand.grid(age = seq(from = 12.5, to = 82.5, by = 5), 
+              period = 2000:2020) %>%
+  dplyr::mutate(cohort = period - age,
+                mean = age.fun(age - mean(age)) + 
+                  per.fun(period - mean(period)) + 
+                  coh.fun(cohort - mean(cohort))) %>% 
+  # need to arrange to match order of the data!!!!
+  dplyr::arrange(age, period)
+true_logRate_estimate <- trueData %>% dplyr::filter(period <= 2017) %>% dplyr::pull(mean)
+true_logRate_inSamplePredcition <- trueData %>% dplyr::filter(period > 2017) %>% dplyr::pull(mean)
 
 # estimation
 ## cr spline
@@ -266,4 +268,5 @@ inSamplePredictionScores <-
 allScores <- 
   cbind(estimateScores %>% dplyr::mutate(type = 'Estimation'),
         inSamplePredictionScores %>% dplyr::mutate(type = 'In-sample prediction'))
+allScores[,c(1:4,7:9)]
 print(xtable::xtable(allScores[,c(1:4,7:9)]), include.rownames = FALSE)
