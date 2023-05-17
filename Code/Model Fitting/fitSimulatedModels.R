@@ -50,34 +50,32 @@ doParallel::registerDoParallel(cl = myCluster)
 ptm <- proc.time() # start timer
 allResults <- foreach::foreach(
   i = 1:nSims,
-  # list packages that are used in process
+  # list packages that are used in loop
   .packages = c('mgcv', 'INLA', 'tidyverse')
 ) %dopar% {
-  # process in loop
-  # estimates
-  ## cr spline basis
+  # cr spline basis
   crSpline <- spline.fit(data = allData[[i]], predictFrom = 2017,
                          mod = 'apc', slopeDrop = 'c', bs = 'cr',
                          knots = list(age = 10, period = 10, cohort = 12),
                          fixed = list(age = F, period = F, cohort = F))$yHat
-  ## bs spline basis
+  # bs spline basis
   bsSpline <- spline.fit(data = allData[[i]], predictFrom = 2017,
                          mod = 'apc', slopeDrop = 'c', bs = 'bs',
                          knots = list(age = 10, period = 10, cohort = 12),
                          fixed = list(age = F, period = F, cohort = F))$yHat
-  ## ps spline basis
+  # ps spline basis
   psSpline <- spline.fit(data = allData[[i]], predictFrom = 2017,
                          mod = 'apc', slopeDrop = 'c', bs = 'ps',
                          knots = list(age = 10, period = 10, cohort = 12),
                          fixed = list(age = F, period = F, cohort = F))$yHat
-  ## rw2 U = 1
+  # rw2 U = 1
   rw2PC1 <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
                            mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
                            pc.u = 1, pc.alpha = 0.01,
                            control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
                            inla.mode = c('classic', 'twostage', 'experimental')[3],
                            control.compute = list(config = TRUE), verbose = FALSE)$yHat
-  ## rw2 U = 3
+  # rw2 U = 3
   rw2PC2 <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
                            mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
                            pc.u = 3, pc.alpha = 0.01,
@@ -85,7 +83,7 @@ allResults <- foreach::foreach(
                            inla.mode = c('classic', 'twostage', 'experimental')[3],
                            control.compute = list(config = TRUE), verbose = FALSE)$yHat
   
-  ## rw2 U = 6
+  # rw2 U = 6
   rw2PC3 <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
                            mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
                            pc.u = 6, pc.alpha = 0.01,
@@ -98,7 +96,7 @@ allResults <- foreach::foreach(
        psSpline = psSpline,
        rw2PC1 = rw2PC1, 
        rw2PC2 = rw2PC2, 
-       rw2PC2 = rw2PC3)
+       rw2PC3 = rw2PC3)
   
 }
 proc.time() - ptm # stop timer
@@ -123,7 +121,7 @@ final <-
 
 maeBP <- 
   ggplot2::ggplot(data = final, aes(x = model, y = mae, col = model, fill = model)) +
-  ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dashed') +
+  ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dotted', linewidth = 1) +
   ggplot2::geom_boxplot(alpha = 0.2) +
   ggplot2::labs(x = '', y = 'Mean Absolute Error') +
   ggplot2::facet_grid(~ type) +
@@ -133,7 +131,7 @@ maeBP <-
 
 mseBP <- 
   ggplot2::ggplot(data = final, aes(x = model, y = mse, col = model, fill = model)) +
-  ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dashed') +
+  ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dotted', linewidth = 1) +
   ggplot2::geom_boxplot(alpha = 0.2) +
   ggplot2::labs(x = '', y = 'Mean Square Error') +
   ggplot2::facet_grid(~ type) +
@@ -142,8 +140,8 @@ mseBP <-
            axis.text.x = element_blank()); mseBP
 
 
-ggplot2::ggsave(filename = paste0(resultsDir, '/biasBP.png'),
-                plot = biasBP,
+ggplot2::ggsave(filename = paste0(resultsDir, '/maeBP.png'),
+                plot = maeBP,
                 width = width, height = height)
 
 ggplot2::ggsave(filename = paste0(resultsDir, '/mseBP.png'),
@@ -154,8 +152,6 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/mseBP.png'),
 
 # average log-rate for data generated
 true_logRate <- log(sapply(allData, `[[`, 'y')/sapply(allData, `[[`, 'N')) %>% rowMeans()
-# confidence level
-alpha <- 0.05
 # upper and lower for each model
 ## cr spline
 crSpline_lower <- final %>% dplyr::filter(model == 'crSpline') %>% dplyr::pull(lower)
@@ -174,12 +170,12 @@ rw2PC2_upper <- final %>% dplyr::filter(model == 'rw2PC2') %>% dplyr::pull(upper
 rw2PC3_lower <- final %>% dplyr::filter(model == 'rw2PC3') %>% dplyr::pull(lower)
 rw2PC3_upper <- final %>% dplyr::filter(model == 'rw2PC3') %>% dplyr::pull(upper)
 
-crSplineScore <- interval.score(lower = crSpline_lower, upper = crSpline_upper, true = true_logRate, alpha = 0.05)
-bsSplineScore <- interval.score(lower = bsSpline_lower, upper = bsSpline_upper, true = true_logRate, alpha = 0.05)
-psSplineScore <- interval.score(lower = psSpline_lower, upper = psSpline_upper, true = true_logRate, alpha = 0.05)
-rw2PC1Score <- interval.score(lower = rw2PC1_lower, upper = rw2PC1_upper, true = true_logRate, alpha = 0.05)
-rw2PC2Score <- interval.score(lower = rw2PC2_lower, upper = rw2PC2_upper, true = true_logRate, alpha = 0.05)
-rw2PC3Score <- interval.score(lower = rw2PC3_lower, upper = rw2PC3_upper, true = true_logRate, alpha = 0.05)
+crSplineScore <- interval.score(lower = crSpline_lower, upper = crSpline_upper, true = true_logRate, alpha = (1-CI))
+bsSplineScore <- interval.score(lower = bsSpline_lower, upper = bsSpline_upper, true = true_logRate, alpha = (1-CI))
+psSplineScore <- interval.score(lower = psSpline_lower, upper = psSpline_upper, true = true_logRate, alpha = (1-CI))
+rw2PC1Score <- interval.score(lower = rw2PC1_lower, upper = rw2PC1_upper, true = true_logRate, alpha = (1-CI))
+rw2PC2Score <- interval.score(lower = rw2PC2_lower, upper = rw2PC2_upper, true = true_logRate, alpha = (1-CI))
+rw2PC3Score <- interval.score(lower = rw2PC3_lower, upper = rw2PC3_upper, true = true_logRate, alpha = (1-CI))
 
 allScores <- 
   data.frame(model = c('crSpline', 'bsSpline', 'psSpline', 'rw2PC1', 'rw2PC2', 'rw2PC3'),
