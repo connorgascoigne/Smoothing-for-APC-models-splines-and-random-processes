@@ -55,47 +55,29 @@ allResults <- foreach::foreach(
 ) %dopar% {
   # process in loop
   # estimates
-  ## spline
-  ### cr basis
+  ## cr spline basis
   crSpline <- spline.fit(data = allData[[i]], predictFrom = 2017,
                          mod = 'apc', slopeDrop = 'c', bs = 'cr',
                          knots = list(age = 10, period = 10, cohort = 12),
                          fixed = list(age = F, period = F, cohort = F))$yHat
-  ### bs
+  ## bs spline basis
   bsSpline <- spline.fit(data = allData[[i]], predictFrom = 2017,
                          mod = 'apc', slopeDrop = 'c', bs = 'bs',
                          knots = list(age = 10, period = 10, cohort = 12),
                          fixed = list(age = F, period = F, cohort = F))$yHat
-  ### ps
+  ## ps spline basis
   psSpline <- spline.fit(data = allData[[i]], predictFrom = 2017,
                          mod = 'apc', slopeDrop = 'c', bs = 'ps',
                          knots = list(age = 10, period = 10, cohort = 12),
                          fixed = list(age = F, period = F, cohort = F))$yHat
-  ## random walk
-  # ### rw1
-  # #### pc1
-  # rw1PC1 <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
-  #                              mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
-  #                              pc.u = 1, pc.alpha = 0.01,
-  #                              control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-  #                              inla.mode = c('classic', 'twostage', 'experimental')[3],
-  #                              control.compute = list(config = TRUE), verbose = FALSE)$yHat
-  # #### pc2
-  # rw1PC2 <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
-  #                              mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
-  #                              pc.u = 3, pc.alpha = 0.01,
-  #                              control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-  #                              inla.mode = c('classic', 'twostage', 'experimental')[3],
-  #                              control.compute = list(config = TRUE), verbose = FALSE)$yHat
-  ### rw2
-  #### pc1
+  ## rw2 U = 1
   rw2PC1 <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
                            mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
                            pc.u = 1, pc.alpha = 0.01,
                            control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
                            inla.mode = c('classic', 'twostage', 'experimental')[3],
                            control.compute = list(config = TRUE), verbose = FALSE)$yHat
-  #### pc2
+  ## rw2 U = 3
   rw2PC2 <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
                            mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
                            pc.u = 3, pc.alpha = 0.01,
@@ -103,13 +85,20 @@ allResults <- foreach::foreach(
                            inla.mode = c('classic', 'twostage', 'experimental')[3],
                            control.compute = list(config = TRUE), verbose = FALSE)$yHat
   
+  ## rw2 U = 6
+  rw2PC3 <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
+                           mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
+                           pc.u = 6, pc.alpha = 0.01,
+                           control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
+                           inla.mode = c('classic', 'twostage', 'experimental')[3],
+                           control.compute = list(config = TRUE), verbose = FALSE)$yHat
+  
   list(crSpline = crSpline, 
        bsSpline = bsSpline, 
        psSpline = psSpline,
-       # rw1PC1 = rw1PC1, 
-       # rw1PC2 = rw1PC2,
        rw2PC1 = rw2PC1, 
-       rw2PC2 = rw2PC2)
+       rw2PC2 = rw2PC2, 
+       rw2PC2 = rw2PC3)
   
 }
 proc.time() - ptm # stop timer
@@ -122,27 +111,15 @@ final <-
   rbind(collect.results(simulationResults = sapply(allResults, `[[`, 'crSpline'), allData = allData, CI = CI, name = 'crSpline'),
         collect.results(simulationResults = sapply(allResults, `[[`, 'bsSpline'), allData = allData, CI = CI, name = 'bsSpline'),
         collect.results(simulationResults = sapply(allResults, `[[`, 'psSpline'), allData = allData, CI = CI, name = 'psSpline'),
-        # collect.results(simulationResults = sapply(allResults, `[[`, 'rw1PC1'), allData = allData, CI = CI, name = 'rw1PC1'),
-        # collect.results(simulationResults = sapply(allResults, `[[`, 'rw1PC2'), allData = allData, CI = CI, name = 'rw1PC2'),
         collect.results(simulationResults = sapply(allResults, `[[`, 'rw2PC1'), allData = allData, CI = CI, name = 'rw2PC1'),
-        collect.results(simulationResults = sapply(allResults, `[[`, 'rw2PC2'), allData = allData, CI = CI, name = 'rw2PC2')) %>% 
-  dplyr::mutate(model = model %>% factor(., levels = c('crSpline', 'bsSpline', 'psSpline', 'rw1PC1', 'rw1PC2', 'rw2PC1', 'rw2PC2')),
+        collect.results(simulationResults = sapply(allResults, `[[`, 'rw2PC2'), allData = allData, CI = CI, name = 'rw2PC2'),
+        collect.results(simulationResults = sapply(allResults, `[[`, 'rw2PC3'), allData = allData, CI = CI, name = 'rw2PC3')) %>% 
+  dplyr::mutate(model = model %>% factor(., levels = c('crSpline', 'bsSpline', 'psSpline', 'rw2PC1', 'rw2PC2', 'rw2PC3')),
                 type = type %>% factor(., levels = c('estimate', 'prediction'), labels = c('Estimation', 'In-sample prediction')))
 
 # results ----
 
 ## plots ----
-
-# ggplot2::ggplot(data = final %>% dplyr::filter(period > 2017), aes(x = age)) +
-#   ggplot2::geom_line(aes(y = median, group = interaction(model, period),  colour = model), linetype = 'dashed') +
-#   ggplot2::geom_line(aes(y = lower, group = interaction(model, period),  colour = model), linetype = 'dashed') +
-#   ggplot2::geom_line(aes(y = upper, group = interaction(model, period),  colour = model), linetype = 'dashed') +
-#   # ggplot2::geom_ribbon(aes(ymin = lower, ymax = upper, group = interaction(model, period), fill = model),
-#   #                      alpha = 0.25, colour = NA) +
-#   ggplot2::geom_line(data = final %>% dplyr::filter(period > 2017) %>% dplyr::select(age, period, cohort, true) %>% dplyr::distinct(), 
-#                      aes(y = true), linetype = 'dotted') +
-#   ggplot2::facet_wrap(~ as.factor(period)) +
-#   my.theme(legend.title = element_blank())
 
 maeBP <- 
   ggplot2::ggplot(data = final, aes(x = model, y = mae, col = model, fill = model)) +
@@ -189,41 +166,40 @@ bsSpline_upper <- final %>% dplyr::filter(model == 'bsSpline') %>% dplyr::pull(u
 ## ps spline
 psSpline_lower <- final %>% dplyr::filter(model == 'psSpline') %>% dplyr::pull(lower)
 psSpline_upper <- final %>% dplyr::filter(model == 'psSpline') %>% dplyr::pull(upper)
-# ## rw1
-# rw1PC1_lower <- final %>% dplyr::filter(model == 'rw1PC1') %>% dplyr::pull(lower)
-# rw1PC1_upper <- final %>% dplyr::filter(model == 'rw1PC1') %>% dplyr::pull(upper)
-# rw1PC2_lower <- final %>% dplyr::filter(model == 'rw1PC2') %>% dplyr::pull(lower)
-# rw1PC2_upper <- final %>% dplyr::filter(model == 'rw1PC2') %>% dplyr::pull(upper)
 ## rw2
 rw2PC1_lower <- final %>% dplyr::filter(model == 'rw2PC1') %>% dplyr::pull(lower)
 rw2PC1_upper <- final %>% dplyr::filter(model == 'rw2PC1') %>% dplyr::pull(upper)
 rw2PC2_lower <- final %>% dplyr::filter(model == 'rw2PC2') %>% dplyr::pull(lower)
 rw2PC2_upper <- final %>% dplyr::filter(model == 'rw2PC2') %>% dplyr::pull(upper)
+rw2PC3_lower <- final %>% dplyr::filter(model == 'rw2PC3') %>% dplyr::pull(lower)
+rw2PC3_upper <- final %>% dplyr::filter(model == 'rw2PC3') %>% dplyr::pull(upper)
 
 crSplineScore <- interval.score(lower = crSpline_lower, upper = crSpline_upper, true = true_logRate, alpha = 0.05)
 bsSplineScore <- interval.score(lower = bsSpline_lower, upper = bsSpline_upper, true = true_logRate, alpha = 0.05)
 psSplineScore <- interval.score(lower = psSpline_lower, upper = psSpline_upper, true = true_logRate, alpha = 0.05)
-# rw1PC1Score <- interval.score(lower = rw1PC1_lower, upper = rw1PC1_upper, true = true_logRate, alpha = 0.05)
-# rw1PC2Score <- interval.score(lower = rw1PC2_lower, upper = rw1PC2_upper, true = true_logRate, alpha = 0.05)
 rw2PC1Score <- interval.score(lower = rw2PC1_lower, upper = rw2PC1_upper, true = true_logRate, alpha = 0.05)
 rw2PC2Score <- interval.score(lower = rw2PC2_lower, upper = rw2PC2_upper, true = true_logRate, alpha = 0.05)
+rw2PC3Score <- interval.score(lower = rw2PC3_lower, upper = rw2PC3_upper, true = true_logRate, alpha = 0.05)
 
 allScores <- 
-  data.frame(model = c('crSpline', 'bsSpline', 'psSpline', 'rw2PC1', 'rw2PC2'),
+  data.frame(model = c('crSpline', 'bsSpline', 'psSpline', 'rw2PC1', 'rw2PC2', 'rw2PC3'),
              averageScore = c(crSplineScore$averageScore,
                               bsSplineScore$averageScore,
                               psSplineScore$averageScore,
                               rw2PC1Score$averageScore,
-                              rw2PC2Score$averageScore),
+                              rw2PC2Score$averageScore,
+                              rw2PC3Score$averageScore),
              averageWidth = c(crSplineScore$averageWidth,
                               bsSplineScore$averageWidth,
                               psSplineScore$averageWidth,
                               rw2PC1Score$averageWidth,
-                              rw2PC2Score$averageWidth),
+                              rw2PC2Score$averageWidth,
+                              rw2PC3Score$averageWidth),
              coverage = c(crSplineScore$coverage,
                           bsSplineScore$coverage,
                           psSplineScore$coverage,
                           rw2PC1Score$coverage,
-                          rw2PC2Score$coverage))
+                          rw2PC2Score$coverage,
+                          rw2PC3Score$coverage))
 
 print(xtable::xtable(allScores), include.rownames = FALSE)
