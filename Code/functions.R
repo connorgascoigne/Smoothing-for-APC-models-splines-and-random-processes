@@ -326,3 +326,20 @@ collect.results <- function(simulationResults, allData, CI, name){
   results
   
 }
+
+# interval score metrics
+interval.score <- function(lower, upper, true, alpha){
+  
+  # lower = rw2PC1_lower; upper = rw2PC1_upper; true = true_logRate; alpha = 0.05;
+  
+  # each part seperately
+  dispersion <- (upper - lower)
+  overprediction <- 2/alpha * (lower - true) * (true < lower)
+  underprediction <- 2/alpha * (true - upper) * (true > upper)
+  
+  averageScore <- (dispersion + underprediction + overprediction) %>% mean()
+  averageWidth <- (upper - lower) %>% mean()
+  coverage <- ((lower < true & true < upper) %>% sum)/length(true)
+  
+  return(list(averageScore = averageScore, averageWidth = averageWidth, coverage = coverage))
+}
