@@ -40,8 +40,6 @@ allData <- readRDS(file = paste0(dataDir, '/allSimulatedData.rds'))
 
 # model fitting ----
 
-## model fit ----
-
 nSims <- length(allData)
 
 # set up cluster 
@@ -131,16 +129,20 @@ final <-
   dplyr::mutate(model = model %>% factor(., levels = c('crSpline', 'bsSpline', 'psSpline', 'rw1PC1', 'rw1PC2', 'rw2PC1', 'rw2PC2')),
                 type = type %>% factor(., levels = c('estimate', 'prediction'), labels = c('Estimation', 'In-sample prediction')))
 
-ggplot2::ggplot(data = final %>% dplyr::filter(period > 2017), aes(x = age)) +
-  ggplot2::geom_line(aes(y = median, group = interaction(model, period),  colour = model), linetype = 'dashed') +
-  ggplot2::geom_line(aes(y = lower, group = interaction(model, period),  colour = model), linetype = 'dashed') +
-  ggplot2::geom_line(aes(y = upper, group = interaction(model, period),  colour = model), linetype = 'dashed') +
-  # ggplot2::geom_ribbon(aes(ymin = lower, ymax = upper, group = interaction(model, period), fill = model),
-  #                      alpha = 0.25, colour = NA) +
-  ggplot2::geom_line(data = final %>% dplyr::filter(period > 2017) %>% dplyr::select(age, period, cohort, true) %>% dplyr::distinct(), 
-                     aes(y = true), linetype = 'dotted') +
-  ggplot2::facet_wrap(~ as.factor(period)) +
-  my.theme(legend.title = element_blank())
+# results ----
+
+## plots ----
+
+# ggplot2::ggplot(data = final %>% dplyr::filter(period > 2017), aes(x = age)) +
+#   ggplot2::geom_line(aes(y = median, group = interaction(model, period),  colour = model), linetype = 'dashed') +
+#   ggplot2::geom_line(aes(y = lower, group = interaction(model, period),  colour = model), linetype = 'dashed') +
+#   ggplot2::geom_line(aes(y = upper, group = interaction(model, period),  colour = model), linetype = 'dashed') +
+#   # ggplot2::geom_ribbon(aes(ymin = lower, ymax = upper, group = interaction(model, period), fill = model),
+#   #                      alpha = 0.25, colour = NA) +
+#   ggplot2::geom_line(data = final %>% dplyr::filter(period > 2017) %>% dplyr::select(age, period, cohort, true) %>% dplyr::distinct(), 
+#                      aes(y = true), linetype = 'dotted') +
+#   ggplot2::facet_wrap(~ as.factor(period)) +
+#   my.theme(legend.title = element_blank())
 
 maeBP <- 
   ggplot2::ggplot(data = final, aes(x = model, y = mae, col = model, fill = model)) +
@@ -170,3 +172,58 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/biasBP.png'),
 ggplot2::ggsave(filename = paste0(resultsDir, '/mseBP.png'),
                 plot = mseBP,
                 width = width, height = height)
+
+## interval scoring metric ----
+
+# average log-rate for data generated
+true_logRate <- log(sapply(allData, `[[`, 'y')/sapply(allData, `[[`, 'N')) %>% rowMeans()
+# confidence level
+alpha <- 0.05
+# upper and lower for each model
+## cr spline
+crSpline_lower <- final %>% dplyr::filter(model == 'crSpline') %>% dplyr::pull(lower)
+crSpline_upper <- final %>% dplyr::filter(model == 'crSpline') %>% dplyr::pull(upper)
+## bs spline
+bsSpline_lower <- final %>% dplyr::filter(model == 'bsSpline') %>% dplyr::pull(lower)
+bsSpline_upper <- final %>% dplyr::filter(model == 'bsSpline') %>% dplyr::pull(upper)
+## ps spline
+psSpline_lower <- final %>% dplyr::filter(model == 'psSpline') %>% dplyr::pull(lower)
+psSpline_upper <- final %>% dplyr::filter(model == 'psSpline') %>% dplyr::pull(upper)
+# ## rw1
+# rw1PC1_lower <- final %>% dplyr::filter(model == 'rw1PC1') %>% dplyr::pull(lower)
+# rw1PC1_upper <- final %>% dplyr::filter(model == 'rw1PC1') %>% dplyr::pull(upper)
+# rw1PC2_lower <- final %>% dplyr::filter(model == 'rw1PC2') %>% dplyr::pull(lower)
+# rw1PC2_upper <- final %>% dplyr::filter(model == 'rw1PC2') %>% dplyr::pull(upper)
+## rw2
+rw2PC1_lower <- final %>% dplyr::filter(model == 'rw2PC1') %>% dplyr::pull(lower)
+rw2PC1_upper <- final %>% dplyr::filter(model == 'rw2PC1') %>% dplyr::pull(upper)
+rw2PC2_lower <- final %>% dplyr::filter(model == 'rw2PC2') %>% dplyr::pull(lower)
+rw2PC2_upper <- final %>% dplyr::filter(model == 'rw2PC2') %>% dplyr::pull(upper)
+
+crSplineScore <- interval.score(lower = crSpline_lower, upper = crSpline_upper, true = true_logRate, alpha = 0.05)
+bsSplineScore <- interval.score(lower = bsSpline_lower, upper = bsSpline_upper, true = true_logRate, alpha = 0.05)
+psSplineScore <- interval.score(lower = psSpline_lower, upper = psSpline_upper, true = true_logRate, alpha = 0.05)
+# rw1PC1Score <- interval.score(lower = rw1PC1_lower, upper = rw1PC1_upper, true = true_logRate, alpha = 0.05)
+# rw1PC2Score <- interval.score(lower = rw1PC2_lower, upper = rw1PC2_upper, true = true_logRate, alpha = 0.05)
+rw2PC1Score <- interval.score(lower = rw2PC1_lower, upper = rw2PC1_upper, true = true_logRate, alpha = 0.05)
+rw2PC2Score <- interval.score(lower = rw2PC2_lower, upper = rw2PC2_upper, true = true_logRate, alpha = 0.05)
+
+allScores <- 
+  data.frame(model = c('crSpline', 'bsSpline', 'psSpline', 'rw2PC1', 'rw2PC2'),
+             averageScore = c(crSplineScore$averageScore,
+                              bsSplineScore$averageScore,
+                              psSplineScore$averageScore,
+                              rw2PC1Score$averageScore,
+                              rw2PC2Score$averageScore),
+             averageWidth = c(crSplineScore$averageWidth,
+                              bsSplineScore$averageWidth,
+                              psSplineScore$averageWidth,
+                              rw2PC1Score$averageWidth,
+                              rw2PC2Score$averageWidth),
+             coverage = c(crSplineScore$coverage,
+                          bsSplineScore$coverage,
+                          psSplineScore$coverage,
+                          rw2PC1Score$coverage,
+                          rw2PC2Score$coverage))
+
+print(xtable::xtable(allScores), include.rownames = FALSE)
