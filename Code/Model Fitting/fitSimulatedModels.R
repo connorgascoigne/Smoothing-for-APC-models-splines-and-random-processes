@@ -42,92 +42,93 @@ allData <- readRDS(file = paste0(dataDir, '/allSimulatedData.rds'))
 
 ## model fit ----
 
-nObs <- nrow(allData[[1]])
 nSims <- length(allData)
 
-crSpline <-
-  bsSpline <-
-  psSpline <-
-  rw1PC1 <-
-  rw1PC2 <-
-  rw2PC1 <-
-  rw2PC2 <- 
-  matrix(NA, nrow = nObs, ncol = nSims)
-
-for(i in 1:nSims){
-  
+# set up cluster 
+nCores <- parallel::detectCores() - 1
+myCluster <- parallel::makeCluster(nCores, type = "PSOCK")
+doParallel::registerDoParallel(cl = myCluster)
+# timed parallel loop
+ptm <- proc.time() # start timer
+allResults <- foreach::foreach(
+  i = 1:nSims,
+  # list packages that are used in process
+  .packages = c('mgcv', 'INLA', 'tidyverse')
+) %dopar% {
+  # process in loop
   # estimates
   ## spline
   ### cr basis
-  crSpline[,i] <- spline.fit(data = allData[[i]], predictFrom = 2017,
-                             mod = 'apc', slopeDrop = 'c', bs = 'cr',
-                             knots = list(age = 10, period = 10, cohort = 12),
-                             fixed = list(age = F, period = F, cohort = F))$yHat
+  crSpline <- spline.fit(data = allData[[i]], predictFrom = 2017,
+                         mod = 'apc', slopeDrop = 'c', bs = 'cr',
+                         knots = list(age = 10, period = 10, cohort = 12),
+                         fixed = list(age = F, period = F, cohort = F))$yHat
   ### bs
-  bsSpline[,i] <- spline.fit(data = allData[[i]], predictFrom = 2017,
-                             mod = 'apc', slopeDrop = 'c', bs = 'bs',
-                             knots = list(age = 10, period = 10, cohort = 12),
-                             fixed = list(age = F, period = F, cohort = F))$yHat
+  bsSpline <- spline.fit(data = allData[[i]], predictFrom = 2017,
+                         mod = 'apc', slopeDrop = 'c', bs = 'bs',
+                         knots = list(age = 10, period = 10, cohort = 12),
+                         fixed = list(age = F, period = F, cohort = F))$yHat
   ### ps
-  psSpline[,i] <- spline.fit(data = allData[[i]], predictFrom = 2017,
-                             mod = 'apc', slopeDrop = 'c', bs = 'ps',
-                             knots = list(age = 10, period = 10, cohort = 12),
-                             fixed = list(age = F, period = F, cohort = F))$yHat
+  psSpline <- spline.fit(data = allData[[i]], predictFrom = 2017,
+                         mod = 'apc', slopeDrop = 'c', bs = 'ps',
+                         knots = list(age = 10, period = 10, cohort = 12),
+                         fixed = list(age = F, period = F, cohort = F))$yHat
   ## random walk
-  ### rw1
-  #### pc1
-  rw1PC1[,i] <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
-                               mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
-                               pc.u = 1, pc.alpha = 0.01,
-                               control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-                               inla.mode = c('classic', 'twostage', 'experimental')[3],
-                               control.compute = list(config = TRUE), verbose = FALSE)$yHat
-  #### pc2
-  rw1PC2[,i] <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
-                               mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
-                               pc.u = 3, pc.alpha = 0.01,
-                               control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-                               inla.mode = c('classic', 'twostage', 'experimental')[3],
-                               control.compute = list(config = TRUE), verbose = FALSE)$yHat
+  # ### rw1
+  # #### pc1
+  # rw1PC1 <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
+  #                              mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
+  #                              pc.u = 1, pc.alpha = 0.01,
+  #                              control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
+  #                              inla.mode = c('classic', 'twostage', 'experimental')[3],
+  #                              control.compute = list(config = TRUE), verbose = FALSE)$yHat
+  # #### pc2
+  # rw1PC2 <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
+  #                              mod = 'apc', slopeDrop = 'c', randomWalk = 'rw1',
+  #                              pc.u = 3, pc.alpha = 0.01,
+  #                              control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
+  #                              inla.mode = c('classic', 'twostage', 'experimental')[3],
+  #                              control.compute = list(config = TRUE), verbose = FALSE)$yHat
   ### rw2
   #### pc1
-  rw2PC1[,i] <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
-                               mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
-                               pc.u = 1, pc.alpha = 0.01,
-                               control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-                               inla.mode = c('classic', 'twostage', 'experimental')[3],
-                               control.compute = list(config = TRUE), verbose = FALSE)$yHat
+  rw2PC1 <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
+                           mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
+                           pc.u = 1, pc.alpha = 0.01,
+                           control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
+                           inla.mode = c('classic', 'twostage', 'experimental')[3],
+                           control.compute = list(config = TRUE), verbose = FALSE)$yHat
   #### pc2
-  rw2PC2[,i] <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
-                               mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
-                               pc.u = 3, pc.alpha = 0.01,
-                               control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-                               inla.mode = c('classic', 'twostage', 'experimental')[3],
-                               control.compute = list(config = TRUE), verbose = FALSE)$yHat
+  rw2PC2 <- randomWalk.fit(data = allData[[i]], predictFrom = 2017,
+                           mod = 'apc', slopeDrop = 'c', randomWalk = 'rw2',
+                           pc.u = 3, pc.alpha = 0.01,
+                           control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
+                           inla.mode = c('classic', 'twostage', 'experimental')[3],
+                           control.compute = list(config = TRUE), verbose = FALSE)$yHat
   
-  print(i)
+  list(crSpline = crSpline, 
+       bsSpline = bsSpline, 
+       psSpline = psSpline,
+       # rw1PC1 = rw1PC1, 
+       # rw1PC2 = rw1PC2,
+       rw2PC1 = rw2PC1, 
+       rw2PC2 = rw2PC2)
   
 }
+proc.time() - ptm # stop timer
+# close cluster
+parallel::stopCluster(cl = myCluster)
 
-# collect results arguments
-CI = 0.95
-allNames <- c('crSpline',
-              'bsSpline',
-              'psSpline',
-              'rw1PC1',
-              'rw1PC2',
-              'rw2PC1',
-              'rw2PC2')
+CI <- 0.95
 
 final <- 
-  rbind(collect.results(simulationResults = eval(parse(text = allNames[1])), allData = allData, CI = CI, name = allNames[1]),
-        collect.results(simulationResults = eval(parse(text = allNames[2])), allData = allData, CI = CI, name = allNames[2]),
-        collect.results(simulationResults = eval(parse(text = allNames[3])), allData = allData, CI = CI, name = allNames[3]),
-        # collect.results(simulationResults = eval(parse(text = allNames[4])), allData = allData, CI = CI, name = allNames[4]),
-        # collect.results(simulationResults = eval(parse(text = allNames[5])), allData = allData, CI = CI, name = allNames[5]),
-        collect.results(simulationResults = eval(parse(text = allNames[6])), allData = allData, CI = CI, name = allNames[6]),
-        collect.results(simulationResults = eval(parse(text = allNames[7])), allData = allData, CI = CI, name = allNames[7])) %>% 
-  dplyr::mutate(model = model %>% factor(., levels = allNames),
+  rbind(collect.results(simulationResults = sapply(allResults, `[[`, 'crSpline'), allData = allData, CI = CI, name = 'crSpline'),
+        collect.results(simulationResults = sapply(allResults, `[[`, 'bsSpline'), allData = allData, CI = CI, name = 'bsSpline'),
+        collect.results(simulationResults = sapply(allResults, `[[`, 'psSpline'), allData = allData, CI = CI, name = 'psSpline'),
+        # collect.results(simulationResults = sapply(allResults, `[[`, 'rw1PC1'), allData = allData, CI = CI, name = 'rw1PC1'),
+        # collect.results(simulationResults = sapply(allResults, `[[`, 'rw1PC2'), allData = allData, CI = CI, name = 'rw1PC2'),
+        collect.results(simulationResults = sapply(allResults, `[[`, 'rw2PC1'), allData = allData, CI = CI, name = 'rw2PC1'),
+        collect.results(simulationResults = sapply(allResults, `[[`, 'rw2PC2'), allData = allData, CI = CI, name = 'rw2PC2')) %>% 
+  dplyr::mutate(model = model %>% factor(., levels = c('crSpline', 'bsSpline', 'psSpline', 'rw1PC1', 'rw1PC2', 'rw2PC1', 'rw2PC2')),
                 type = type %>% factor(., levels = c('estimate', 'prediction'), labels = c('Estimation', 'In-sample prediction')))
 
 ggplot2::ggplot(data = final %>% dplyr::filter(period > 2017), aes(x = age)) +
