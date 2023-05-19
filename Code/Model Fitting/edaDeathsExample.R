@@ -131,7 +131,7 @@ alcoholData <-
 splineFit <- 
   spline.fit(data = alcoholData,
              predictFrom = 2018,
-             mod = 'apc', slopeDrop = 'c', bs = 'cr', 
+             mod = 'apc', slopeDrop = 'c', bs = 'tp', 
              knots = list(age = 10, period = 10, cohort = 12),
              fixed = list(age = FALSE, period = FALSE, cohort = FALSE))
 
@@ -253,7 +253,7 @@ selfHarmData <-
 splineFit <- 
   spline.fit(data = selfHarmData,
              predictFrom = 2018,
-             mod = 'apc', slopeDrop = 'c', bs = 'cr', 
+             mod = 'apc', slopeDrop = 'c', bs = 'tp', 
              knots = list(age = 10, period = 10, cohort = 12),
              fixed = list(age = FALSE, period = FALSE, cohort = FALSE))
 
