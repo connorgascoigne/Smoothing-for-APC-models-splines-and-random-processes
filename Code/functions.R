@@ -338,7 +338,7 @@ interval.score <- function(lower, upper, true, alpha){
   underprediction <- 2/alpha * (true - upper) * (true > upper)
   
   averageScore <- (dispersion + underprediction + overprediction) %>% mean()
-  averageWidth <- (upper - lower) %>% mean()
+  averageWidth <- dispersion %>% mean()
   coverage <- ((lower < true & true < upper) %>% sum)/length(true)
   
   return(list(averageScore = averageScore, averageWidth = averageWidth, coverage = coverage))
