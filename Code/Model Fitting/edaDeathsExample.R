@@ -263,19 +263,24 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/alcoholPredicted_splineVsRW2.png
 #### line plots ----
 
 alcoholPredictedLineplot <-
-  ggplot2::ggplot(data = alcoholResults, aes(x = period)) +
+  ggplot2::ggplot(data = 
+                    alcoholResults %>% 
+                    dplyr::mutate(Age_Group = Age_Group %>% stringr::str_replace(., 'Aged ', '') %>% stringr::str_replace(., ' years', '')), 
+                  aes(x = period)) +
   ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted', linewidth = 1) +
   ggplot2::geom_line(aes(y = yHat, color = model)) + 
   ggplot2:: geom_line(aes(y = lower, color = model), linetype = 'dashed') + 
   ggplot2:: geom_line(aes(y = upper, color = model), linetype = 'dashed') +
-  ggplot2::geom_point(data = alcoholData, aes(y = log(y/N))) +
+  ggplot2::geom_point(data = alcoholData %>% 
+                        dplyr::mutate(Age_Group = Age_Group %>% stringr::str_replace(., 'Aged ', '') %>% stringr::str_replace(., ' years', '')), 
+                      aes(y = log(y/N))) +
   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
   ggplot2::scale_colour_manual(values = c('green4', 'blue3', 'purple3')) + 
-  ggplot2::labs(y = 'Log-Rate', x = 'Period') +
+  ggplot2::labs(y = 'Log-Rate', x = 'Year') +
   ggplot2::facet_wrap(~ Age_Group, scales = 'free') +
   my.theme(legend.title = element_blank(),
            text = element_text(size = textSize),
-           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); alcoholPredictedLineplot
+           axis.text.x = element_blank()); alcoholPredictedLineplot
 
 ggplot2::ggsave(filename = paste0(resultsDir, '/alcoholPredictedLineplot.png'),
                 plot = alcoholPredictedLineplot,
@@ -434,19 +439,25 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/selfHarmPredicted_splineVsRW2.pn
 #### line plots ----
 
 selfHarmPredictedLineplot <-
-  ggplot2::ggplot(data = selfHarmResults, aes(x = period)) +
+  ggplot2::ggplot(data = 
+                    selfHarmResults %>% 
+                    dplyr::mutate(Age_Group = Age_Group %>% stringr::str_replace(., 'Aged ', '') %>% stringr::str_replace(., ' years', '')), 
+                  aes(x = period)) +
   ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted', linewidth = 1) +
   ggplot2::geom_line(aes(y = yHat, color = model)) + 
   ggplot2:: geom_line(aes(y = lower, color = model), linetype = 'dashed') + 
   ggplot2:: geom_line(aes(y = upper, color = model), linetype = 'dashed') +
-  ggplot2::geom_point(data = selfHarmData, aes(y = log(y/N))) +
+  ggplot2::geom_point(data = 
+                        selfHarmData %>% 
+                        dplyr::mutate(Age_Group = Age_Group %>% stringr::str_replace(., 'Aged ', '') %>% stringr::str_replace(., ' years', '')), 
+                      aes(y = log(y/N))) +
   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
   ggplot2::scale_colour_manual(values = c('green4', 'blue3', 'purple3')) + 
-  ggplot2::labs(y = 'Log-Rate', x = 'Period') +
+  ggplot2::labs(y = 'Log-Rate', x = 'Year') +
   ggplot2::facet_wrap(~ Age_Group, scales = 'free') +
   my.theme(legend.title = element_blank(),
            text = element_text(size = textSize),
-           axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); selfHarmPredictedLineplot
+           axis.text.x = element_blank()); selfHarmPredictedLineplot
 
 ggplot2::ggsave(filename = paste0(resultsDir, '/selfHarmPredictedLineplot.png'),
                 plot = selfHarmPredictedLineplot,
