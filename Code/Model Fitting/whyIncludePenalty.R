@@ -2,7 +2,6 @@
 
 library(tidyverse)
 library(mgcv)
-library(INLA)
 
 # directories ---- 
 
@@ -63,29 +62,22 @@ data <-
 
 A <- data$age %>% unique %>% length()
 
-## knots ----
-
-lowKnots <- list(age = 3, period = 3, cohort = 3)
-highKnots <- list(age = A-1, period = 3, cohort = 3)
-yesPenaltyTerm <- list(age = F, period = F, cohort = F)
-noPenaltyTerm <- list(age = T, period = T, cohort = T)
-
 ## models ----
 
 lowKnots_yesPenalty <- 
-  gam(y ~ s(age, bs = 'cr', k = 3, fx = FALSE),
+  gam(y ~ s(age, bs = 'tp', k = 3, fx = FALSE),
       offset = log(N), family = 'poisson', data = data, method = 'REML')
 
 lowKnots_noPenalty <- 
-  gam(y ~ s(age, bs = 'cr', k = 3, fx = TRUE),
+  gam(y ~ s(age, bs = 'tp', k = 3, fx = TRUE),
       offset = log(N), family = 'poisson', data = data, method = 'REML')
 
 highKnots_yesPenalty <- 
-  gam(y ~ s(age, bs = 'cr', k = A-1, fx = FALSE),
+  gam(y ~ s(age, bs = 'tp', k = A, fx = FALSE),
       offset = log(N), family = 'poisson', data = data, method = 'REML')
 
 highKnots_noPenalty <- 
-  gam(y ~ s(age, bs = 'cr', k = A-1, fx = TRUE),
+  gam(y ~ s(age, bs = 'tp', k = A, fx = TRUE),
       offset = log(N), family = 'poisson', data = data, method = 'REML')
 
 ## collect results ----
@@ -113,6 +105,7 @@ p1 <-
   ggplot2::geom_point(aes(y = log(y)), color = 'black') +
   ggplot2::geom_line(aes(y = estimates, group = type, color = type)) +
   ggplot2::labs(y = 'Linear Predictor', x = 'Age') +
+  ggplot2::scale_color_manual(values = c('red3', 'green4', 'blue3', 'purple3')) +
   my.theme(legend.title = element_blank(),
            legend.position = 'top',
            text = element_text(size = textSize)); p1
