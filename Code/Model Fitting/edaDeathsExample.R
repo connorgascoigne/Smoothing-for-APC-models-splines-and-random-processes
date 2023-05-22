@@ -166,7 +166,7 @@ alcoholPredictedHeatmap_spline <-
   ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
   ggplot2::geom_raster() +
   ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
-  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dashed', linewidth = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted', linewidth = 1) +
   ggplot2::labs(x = 'Year', y = 'Age') +
   my.theme(text = element_text(size = textSize),
            axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); alcoholPredictedHeatmap_spline
@@ -287,7 +287,7 @@ selfHarmPredictedHeatmap_spline <-
   ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
   ggplot2::geom_raster() +
   ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
-  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dashed', linewidth = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted', linewidth = 1) +
   ggplot2::labs(x = 'Year', y = 'Age') +
   my.theme(text = element_text(size = textSize),
            axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); selfHarmPredictedHeatmap_spline
