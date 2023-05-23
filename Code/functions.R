@@ -343,3 +343,34 @@ interval.score <- function(lower, upper, true, alpha){
   
   return(list(averageScore = averageScore, averageWidth = averageWidth, coverage = coverage))
 }
+
+# find the interval score from data
+find.score <- function(true, results, model, predictFrom, CI){
+  
+  # true <- alcoholData; result <- alcoholResults; predictFrom <- 2017; CI <- 0.95;
+  
+  trueSorted <- 
+    true %>% 
+    dplyr::mutate(logRate = log(y/N)) %>% 
+    dplyr::arrange(age, period, cohort)
+  
+  resultsSorted <- 
+    results %>% 
+    dplyr::filter(model == model) %>% 
+    dplyr::arrange(age, period, cohort)
+  
+  # estimate 
+  trueEstimate <- trueSorted %>% dplyr::filter(period <= predictFrom) %>% dplyr::pull(logRate)
+  modelEstimate_Lower <- resultsSorted %>% dplyr::filter(period <= predictFrom) %>% dplyr::pull(lower)
+  modelEstimate_Upper <- resultsSorted %>% dplyr::filter(period <= predictFrom) %>% dplyr::pull(upper)
+  scoreEstimate <- interval.score(lower = modelEstimate_Lower, upper = modelEstimate_Upper, true = trueEstimate, alpha = (1-CI))
+  
+  # predict
+  truePredict <- trueSorted %>% dplyr::filter(period > predictFrom) %>% dplyr::pull(logRate)
+  modelPredict_Lower <- resultsSorted %>% dplyr::filter(period > predictFrom) %>% dplyr::pull(lower)
+  modelPredict_Upper <- resultsSorted %>% dplyr::filter(period > predictFrom) %>% dplyr::pull(upper)
+  scorePredict <- interval.score(lower = modelPredict_Lower, upper = modelPredict_Upper, true = truePredict, alpha = (1-CI))
+  
+  return(list(scoreEstimate = scoreEstimate, scorePredict = scorePredict))
+  
+}
