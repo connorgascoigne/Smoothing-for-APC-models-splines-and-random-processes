@@ -194,12 +194,16 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/alcoholPredictedHeatmap_rw2.png'
 
 alcoholPredicted_splineVsRW2 <-
   ggplot2::ggplot(alcoholResults %>% 
-                    tidyr::pivot_wider(., names_from = model, values_from = c('yHat', 'lower', 'upper')),
-                  aes(x = yHat_Spline, y = yHat_RW2)) +
+                    tidyr::pivot_wider(., names_from = model, values_from = c('yHat', 'lower', 'upper')) %>% 
+                    dplyr::mutate(type = dplyr::if_else(period <= (max(period) -3), 'Estimation', 'In-sample prediction')),
+                  aes(x = yHat_Spline, y = yHat_RW2, shape = type, colour = type)) +
   ggplot2::geom_abline(aes(intercept = 0, slope = 1), colour = 'red3', linetype = 'dotted', linewidth = 1) +
   ggplot2::geom_point() +
+  ggplot2::scale_shape_manual(values = c(1, 2)) +
+  ggplot2::scale_color_manual(values = c('green4', 'blue3')) +
   ggplot2::labs(x = 'Spline', y = 'RW2') +
-  my.theme(); alcoholPredicted_splineVsRW2
+  my.theme(legend.title = element_blank(),
+           legend.position = c(0.9, 0.1)); alcoholPredicted_splineVsRW2
 
 ggplot2::ggsave(filename = paste0(resultsDir, '/alcoholPredicted_splineVsRW2.png'),
                 plot = alcoholPredicted_splineVsRW2,
@@ -315,12 +319,16 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/selfHarmPredictedHeatmap_rw2.png
 
 selfHarmPredicted_splineVsRW2 <-
   ggplot2::ggplot(selfHarmResults %>% 
-                    tidyr::pivot_wider(., names_from = model, values_from = c('yHat', 'lower', 'upper')),
-                  aes(x = yHat_Spline, y = yHat_RW2)) +
+                    tidyr::pivot_wider(., names_from = model, values_from = c('yHat', 'lower', 'upper')) %>% 
+                    dplyr::mutate(type = dplyr::if_else(period <= (max(period) -3), 'Estimation', 'In-sample prediction')),
+                  aes(x = yHat_Spline, y = yHat_RW2, shape = type, colour = type)) +
   ggplot2::geom_abline(aes(intercept = 0, slope = 1), colour = 'red3', linetype = 'dotted', linewidth = 1) +
   ggplot2::geom_point() +
+  ggplot2::scale_shape_manual(values = c(1, 2)) +
+  ggplot2::scale_color_manual(values = c('green4', 'blue3')) +
   ggplot2::labs(x = 'Spline', y = 'RW2') +
-  my.theme(); selfHarmPredicted_splineVsRW2
+  my.theme(legend.title = element_blank(),
+           legend.position = c(0.9, 0.1)); alcoholPredicted_splineVsRW2
 
 ggplot2::ggsave(filename = paste0(resultsDir, '/selfHarmPredicted_splineVsRW2.png'),
                 plot = selfHarmPredicted_splineVsRW2,
