@@ -203,7 +203,8 @@ alcoholPredicted_splineVsRW2 <-
   ggplot2::scale_color_manual(values = c('green4', 'blue3')) +
   ggplot2::labs(x = 'Spline', y = 'RW2') +
   my.theme(legend.title = element_blank(),
-           legend.position = c(0.9, 0.1)); alcoholPredicted_splineVsRW2
+           text = element_text(size = textSize),
+           legend.position = c(0.85, 0.1)); alcoholPredicted_splineVsRW2
 
 ggplot2::ggsave(filename = paste0(resultsDir, '/alcoholPredicted_splineVsRW2.png'),
                 plot = alcoholPredicted_splineVsRW2,
@@ -328,7 +329,8 @@ selfHarmPredicted_splineVsRW2 <-
   ggplot2::scale_color_manual(values = c('green4', 'blue3')) +
   ggplot2::labs(x = 'Spline', y = 'RW2') +
   my.theme(legend.title = element_blank(),
-           legend.position = c(0.9, 0.1)); alcoholPredicted_splineVsRW2
+           text = element_text(size = textSize),
+           legend.position = c(0.85, 0.1)); alcoholPredicted_splineVsRW2
 
 ggplot2::ggsave(filename = paste0(resultsDir, '/selfHarmPredicted_splineVsRW2.png'),
                 plot = selfHarmPredicted_splineVsRW2,
@@ -360,6 +362,57 @@ selfHarmPredictedLineplot <-
 ggplot2::ggsave(filename = paste0(resultsDir, '/selfHarmPredictedLineplot.png'),
                 plot = selfHarmPredictedLineplot,
                 height = height, width = width)
+
+# models scores ----
+
+alcoholSplineScore <- find.score(true = alcoholData, results = alcoholResults, model = 'Spline', predictFrom = 2017, CI = 0.95)
+alcoholRW2Score <- find.score(true = alcoholData, results = alcoholResults, model = 'RW2', predictFrom = 2017, CI = 0.95)
+
+selfHarmSplineScore <- find.score(true = selfHarmData, results = selfHarmResults, model = 'Spline', predictFrom = 2017, CI = 0.95)
+selfHarmRW2Score <- find.score(true = selfHarmData, results = selfHarmResults, model = 'RW2', predictFrom = 2017, CI = 0.95)
+
+
+estimateScores <- 
+  data.frame(data = rep(c('Alcohol', 'Self Harm'), each = 2),
+             model = rep(c('Spline', 'RW2'), times = 2),
+             averageScore = c(alcoholSplineScore$scoreEstimate$averageScore,
+                              alcoholRW2Score$scoreEstimate$averageScore,
+                              selfHarmSplineScore$scoreEstimate$averageScore,
+                              selfHarmRW2Score$scoreEstimate$averageScore),
+             averageWidth = c(alcoholSplineScore$scoreEstimate$averageWidth,
+                              alcoholRW2Score$scoreEstimate$averageWidth,
+                              selfHarmSplineScore$scoreEstimate$averageWidth,
+                              selfHarmRW2Score$scoreEstimate$averageWidth),
+             coverage = c(alcoholSplineScore$scoreEstimate$coverage,
+                          alcoholRW2Score$scoreEstimate$coverage,
+                          selfHarmSplineScore$scoreEstimate$coverage,
+                          selfHarmRW2Score$scoreEstimate$coverage)) %>% 
+  dplyr::mutate(across(-c('model', 'data'), ~ round(.x*100, digits = 2))); estimateScores
+
+
+predictScores <- 
+  data.frame(data = rep(c('Alcohol', 'Self Harm'), each = 2),
+             model = rep(c('Spline', 'RW2'), times = 2),
+             averageScore = c(alcoholSplineScore$scorePredict$averageScore,
+                              alcoholRW2Score$scorePredict$averageScore,
+                              selfHarmSplineScore$scorePredict$averageScore,
+                              selfHarmRW2Score$scorePredict$averageScore),
+             averageWidth = c(alcoholSplineScore$scorePredict$averageWidth,
+                              alcoholRW2Score$scorePredict$averageWidth,
+                              selfHarmSplineScore$scorePredict$averageWidth,
+                              selfHarmRW2Score$scorePredict$averageWidth),
+             coverage = c(alcoholSplineScore$scorePredict$coverage,
+                          alcoholRW2Score$scorePredict$coverage,
+                          selfHarmSplineScore$scorePredict$coverage,
+                          selfHarmRW2Score$scorePredict$coverage)) %>% 
+  dplyr::mutate(across(-c('model', 'data'), ~ round(.x*100, digits = 2))); predictScores
+
+
+allScores <- 
+  cbind(estimateScores %>% dplyr::mutate(type = 'Estimation'),
+        predictScores %>% dplyr::mutate(type = 'In-sample prediction'))
+allScores[,c(1:5,9:11)]
+print(xtable::xtable(allScores[,c(1:5,9:11)]), include.rownames = FALSE)
 
 
 
