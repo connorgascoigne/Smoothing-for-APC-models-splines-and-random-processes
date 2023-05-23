@@ -112,7 +112,9 @@ final <-
         collect.results(simulationResults = sapply(allResults, `[[`, 'rw2PC1'), allData = allData, CI = CI, name = 'rw2PC1'),
         collect.results(simulationResults = sapply(allResults, `[[`, 'rw2PC2'), allData = allData, CI = CI, name = 'rw2PC2'),
         collect.results(simulationResults = sapply(allResults, `[[`, 'rw2PC3'), allData = allData, CI = CI, name = 'rw2PC3')) %>% 
-  dplyr::mutate(model = model %>% factor(., levels = c('crSpline', 'bsSpline', 'tpSpline', 'rw2PC1', 'rw2PC2', 'rw2PC3')),
+  dplyr::mutate(model = model %>% factor(., levels = c('crSpline', 'bsSpline', 'tpSpline', 'rw2PC1', 'rw2PC2', 'rw2PC3'),
+                                         labels = c('CRS', 'BS', 'TPRS', 
+                                                    'U = 1', 'U = 3', 'U = 6')),
                 type = type %>% factor(., levels = c('estimate', 'prediction'), labels = c('Estimation', 'In-sample prediction')))
 
 # results ----
