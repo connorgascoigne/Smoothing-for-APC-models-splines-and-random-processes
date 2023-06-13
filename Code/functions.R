@@ -266,9 +266,13 @@ randomWalk.fit <-
 # additional functions ----
 
 # summary for estimates
-my.summary <- function(x, lowerCI, upperCI) {
+my.summary <- function(x, CI = 0.95) {
   
   # x = theta1[,1]; lowerCI = lowerCI; upperCI = upperCI
+  
+  # lower and upper CI calculators
+  lowerCI <- (1 - CI)/2
+  upperCI <- 1 - lowerCI
   
   qntl <- quantile(x, probs = c(lowerCI, 0.5, upperCI))
   data.frame(mean = mean(x), variance = var(x), lower = qntl[1], median = qntl[2], upper = qntl[3])
@@ -285,46 +289,6 @@ my.theme<-function(...){
         legend.text.align=0,
         legend.key=element_rect(fill=NA),
         ...)
-}
-
-# collect simulation results
-collect.results <- function(simulationResults, allData, CI, name){
-  
-  # setting up
-  ## true
-  true <- 
-    allData[[1]] %>%
-    dplyr::select(age, period, cohort) %>%
-    dplyr::mutate(true = age.fun(age - mean(age)) + per.fun(period - mean(period)) + coh.fun(cohort - mean(cohort)))
-  ## number of sims
-  nSims <- length(allData)
-  
-  # lower and upper CI calculators
-  lowerCI <- (1 - CI)/2
-  upperCI <- 1 - lowerCI
-  
-  # colnames
-  colnames(simulationResults) <- paste0('theta:', 1:nSims) 
-  
-  # results
-  results <-
-    cbind(true , simulationResults) %>% 
-    dplyr::mutate(dplyr::select(., starts_with('theta:')) %>% 
-                    apply(., 1, my.summary, lowerCI = lowerCI, upperCI = upperCI) %>% 
-                    lapply(., data.frame) %>%
-                    do.call(rbind, .),
-                  mae = 
-                    dplyr::across(dplyr::starts_with('theta:'), ~  abs(. - true)) %>% 
-                    rowMeans(),
-                  mse = 
-                    dplyr::across(dplyr::starts_with('theta:'), ~  (. - true)^2) %>% 
-                    rowMeans(),
-                  model = name,
-                  type = dplyr::if_else(period > 2017, 'prediction', 'estimate')) %>%
-    dplyr::select(-starts_with('theta:'))
-  
-  results
-  
 }
 
 # interval score metrics
@@ -344,33 +308,119 @@ interval.score <- function(lower, upper, true, alpha){
   return(list(averageScore = averageScore, averageWidth = averageWidth, coverage = coverage))
 }
 
-# find the interval score from data
-find.score <- function(true, results, model, predictFrom, CI){
+# mae, mse, is, width and coverage for one set of data
+model.score.summary <- function(results, trueData, CI, periods, model) {
   
-  # true <- alcoholData; result <- alcoholResults; predictFrom <- 2017; CI <- 0.95;
+  # results = splineResults; trueData = trueData2; CI = CI; periods = periods; model = 'Spline'
   
-  trueSorted <- 
-    true %>% 
-    dplyr::mutate(logRate = log(y/N)) %>% 
-    dplyr::arrange(age, period, cohort)
-  
-  resultsSorted <- 
+  res <-
     results %>% 
-    dplyr::filter(model == model) %>% 
-    dplyr::arrange(age, period, cohort)
+    dplyr::left_join(., trueData, by = c('age', 'period', 'cohort')) %>% 
+    dplyr::filter(period %in% periods)
   
-  # estimate 
-  trueEstimate <- trueSorted %>% dplyr::filter(period <= predictFrom) %>% dplyr::pull(logRate)
-  modelEstimate_Lower <- resultsSorted %>% dplyr::filter(period <= predictFrom) %>% dplyr::pull(lower)
-  modelEstimate_Upper <- resultsSorted %>% dplyr::filter(period <= predictFrom) %>% dplyr::pull(upper)
-  scoreEstimate <- interval.score(lower = modelEstimate_Lower, upper = modelEstimate_Upper, true = trueEstimate, alpha = (1-CI))
+  periodLabel <- paste0(min(periods),':',max(periods))
   
-  # predict
-  truePredict <- trueSorted %>% dplyr::filter(period > predictFrom) %>% dplyr::pull(logRate)
-  modelPredict_Lower <- resultsSorted %>% dplyr::filter(period > predictFrom) %>% dplyr::pull(lower)
-  modelPredict_Upper <- resultsSorted %>% dplyr::filter(period > predictFrom) %>% dplyr::pull(upper)
-  scorePredict <- interval.score(lower = modelPredict_Lower, upper = modelPredict_Upper, true = truePredict, alpha = (1-CI))
+  truth <- res$true
+  estimate <- res$yHat
+  lower <- res$lower
+  upper <- res$upper
   
-  return(list(scoreEstimate = scoreEstimate, scorePredict = scorePredict))
+  
+  scores <- interval.score(lower = lower, upper = upper, true = truth, alpha = (1-CI))
+  
+  mae <- data.frame(periods = periodLabel, model = model, mae = abs(estimate - truth))
+  mse <- data.frame(periods = periodLabel, model = model, mse = (estimate - truth)^2)
+  is <- data.frame(periods = periodLabel, model = model, is = scores$averageScore)
+  width <- data.frame(periods = periodLabel, model = model, width = scores$averageWidth)
+  coverage <- data.frame(periods = periodLabel, model = model, coverage = scores$coverage)
+  
+  return(list(mae = mae, mse = mse, is = is, width = width, coverage = coverage))
+  
+}
+
+# scores for all simulation data models at once
+collect.simulation.results <- function(allBasisResults, trueData, CI, periods){
+  
+  # allBasisResults = allResults[[i]]; trueData = trueData; CI = CI; periods = 2000:2017
+  
+  crSplineResults <- model.score.summary(results = allBasisResults$crSpline, trueData = trueData, CI = CI, periods = periods, model = 'crSpline')
+  bsSplineResults <- model.score.summary(results = allBasisResults$bsSpline, trueData = trueData, CI = CI, periods = periods, model = 'bsSpline')
+  tprsSplineResults <- model.score.summary(results = allBasisResults$tpSpline, trueData = trueData, CI = CI, periods = periods, model = 'tpSpline')
+  rw2PC1Results <- model.score.summary(results = allBasisResults$rw2PC1, trueData = trueData, CI = CI, periods = periods, model = 'rw2PC1')
+  rw2PC2Results <- model.score.summary(results = allBasisResults$rw2PC2, trueData = trueData, CI = CI, periods = periods, model = 'rw2PC2')
+  rw2PC3Results <- model.score.summary(results = allBasisResults$rw2PC3, trueData = trueData, CI = CI, periods = periods, model = 'rw2PC3')
+  
+  scores <- 
+    rbind(crSplineResults$mae %>% dplyr::rename(score = mae) %>% dplyr::mutate(metric = 'mae') %>% relocate(metric, .after = model),
+          bsSplineResults$mae %>% dplyr::rename(score = mae) %>% dplyr::mutate(metric = 'mae') %>% relocate(metric, .after = model),
+          tprsSplineResults$mae %>% dplyr::rename(score = mae) %>% dplyr::mutate(metric = 'mae') %>% relocate(metric, .after = model),
+          rw2PC1Results$mae %>% dplyr::rename(score = mae) %>% dplyr::mutate(metric = 'mae') %>% relocate(metric, .after = model),
+          rw2PC2Results$mae %>% dplyr::rename(score = mae) %>% dplyr::mutate(metric = 'mae') %>% relocate(metric, .after = model),
+          rw2PC3Results$mae %>% dplyr::rename(score = mae) %>% dplyr::mutate(metric = 'mae') %>% relocate(metric, .after = model),
+          crSplineResults$mse %>% dplyr::rename(score = mse) %>% dplyr::mutate(metric = 'mse') %>% relocate(metric, .after = model),
+          bsSplineResults$mse %>% dplyr::rename(score = mse) %>% dplyr::mutate(metric = 'mse') %>% relocate(metric, .after = model),
+          tprsSplineResults$mse %>% dplyr::rename(score = mse) %>% dplyr::mutate(metric = 'mse') %>% relocate(metric, .after = model),
+          rw2PC1Results$mse %>% dplyr::rename(score = mse) %>% dplyr::mutate(metric = 'mse') %>% relocate(metric, .after = model),
+          rw2PC2Results$mse %>% dplyr::rename(score = mse) %>% dplyr::mutate(metric = 'mse') %>% relocate(metric, .after = model),
+          rw2PC3Results$mse %>% dplyr::rename(score = mse) %>% dplyr::mutate(metric = 'mse') %>% relocate(metric, .after = model),
+          crSplineResults$is %>% dplyr::rename(score = is) %>% dplyr::mutate(metric = 'is') %>% relocate(metric, .after = model),
+          bsSplineResults$is %>% dplyr::rename(score = is) %>% dplyr::mutate(metric = 'is') %>% relocate(metric, .after = model),
+          tprsSplineResults$is %>% dplyr::rename(score = is) %>% dplyr::mutate(metric = 'is') %>% relocate(metric, .after = model),
+          rw2PC1Results$is %>% dplyr::rename(score = is) %>% dplyr::mutate(metric = 'is') %>% relocate(metric, .after = model),
+          rw2PC2Results$is %>% dplyr::rename(score = is) %>% dplyr::mutate(metric = 'is') %>% relocate(metric, .after = model),
+          rw2PC3Results$is %>% dplyr::rename(score = is) %>% dplyr::mutate(metric = 'is') %>% relocate(metric, .after = model),
+          crSplineResults$width %>% dplyr::rename(score = width) %>% dplyr::mutate(metric = 'width') %>% relocate(metric, .after = model),
+          bsSplineResults$width %>% dplyr::rename(score = width) %>% dplyr::mutate(metric = 'width') %>% relocate(metric, .after = model),
+          tprsSplineResults$width %>% dplyr::rename(score = width) %>% dplyr::mutate(metric = 'width') %>% relocate(metric, .after = model),
+          rw2PC1Results$width %>% dplyr::rename(score = width) %>% dplyr::mutate(metric = 'width') %>% relocate(metric, .after = model),
+          rw2PC2Results$width %>% dplyr::rename(score = width) %>% dplyr::mutate(metric = 'width') %>% relocate(metric, .after = model),
+          rw2PC3Results$width %>% dplyr::rename(score = width) %>% dplyr::mutate(metric = 'width') %>% relocate(metric, .after = model),
+          crSplineResults$coverage %>% dplyr::rename(score = coverage) %>% dplyr::mutate(metric = 'coverage') %>% relocate(metric, .after = model),
+          bsSplineResults$coverage %>% dplyr::rename(score = coverage) %>% dplyr::mutate(metric = 'coverage') %>% relocate(metric, .after = model),
+          tprsSplineResults$coverage %>% dplyr::rename(score = coverage) %>% dplyr::mutate(metric = 'coverage') %>% relocate(metric, .after = model),
+          rw2PC1Results$coverage %>% dplyr::rename(score = coverage) %>% dplyr::mutate(metric = 'coverage') %>% relocate(metric, .after = model),
+          rw2PC2Results$coverage %>% dplyr::rename(score = coverage) %>% dplyr::mutate(metric = 'coverage') %>% relocate(metric, .after = model),
+          rw2PC3Results$coverage %>% dplyr::rename(score = coverage) %>% dplyr::mutate(metric = 'coverage') %>% relocate(metric, .after = model))
+  
+  scores
+  
+}
+
+# scores for all suicide data models at once
+collect.suicide.results <- function(allModelResults, trueData, CI, periods){
+  
+  # allModelResults = alcoholResults; trueData = alcoholResults; CI = 0.95; periods = 2000:2017
+  
+  trueData2 <- 
+    trueData %>% 
+    dplyr::mutate(true = yHat) %>% 
+    dplyr::select(age, period, cohort, true)
+  
+  splineResults <-
+    allModelResults %>% 
+    dplyr::filter(model == 'Spline')
+  
+  rw2Results <-
+    allModelResults %>% 
+    dplyr::filter(model == 'RW2')
+  
+  splineScores <- model.score.summary(results = splineResults, trueData = trueData2, CI = CI, periods = periods, model = 'Spline')
+  rw2Scores <- model.score.summary(results = rw2Results, trueData = trueData2, CI = CI, periods = periods, model = 'RW2')
+  
+  
+  scores <- 
+    rbind(splineScores$mae %>% dplyr::rename(score = mae) %>% dplyr::mutate(metric = 'mae'),
+          rw2Scores$mae %>% dplyr::rename(score = mae) %>% dplyr::mutate(metric = 'mae'),
+          splineScores$mse %>% dplyr::rename(score = mse) %>% dplyr::mutate(metric = 'mse'),
+          rw2Scores$mse %>% dplyr::rename(score = mse) %>% dplyr::mutate(metric = 'mse'),
+          splineScores$is %>% dplyr::rename(score = is) %>% dplyr::mutate(metric = 'is'),
+          rw2Scores$is %>% dplyr::rename(score = is) %>% dplyr::mutate(metric = 'is'),
+          splineScores$width %>% dplyr::rename(score = width) %>% dplyr::mutate(metric = 'width'),
+          rw2Scores$width %>% dplyr::rename(score = width) %>% dplyr::mutate(metric = 'width'),
+          splineScores$coverage %>% dplyr::rename(score = coverage) %>% dplyr::mutate(metric = 'coverage'),
+          rw2Scores$coverage %>% dplyr::rename(score = coverage) %>% dplyr::mutate(metric = 'coverage'))
+  
+  
+  scores
   
 }
