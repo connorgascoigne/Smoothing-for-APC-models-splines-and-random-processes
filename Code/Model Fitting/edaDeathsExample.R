@@ -365,54 +365,30 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/selfHarmPredictedLineplot.png'),
 
 # models scores ----
 
-alcoholSplineScore <- find.score(true = alcoholData, results = alcoholResults, model = 'Spline', predictFrom = 2017, CI = 0.95)
-alcoholRW2Score <- find.score(true = alcoholData, results = alcoholResults, model = 'RW2', predictFrom = 2017, CI = 0.95)
+alcoholEstimationResults <- collect.suicide.results(allModelResults = alcoholResults, trueData = alcoholResults, CI = CI, periods = 2000:2017)
+alcoholPredictionResults <- collect.suicide.results(allModelResults = alcoholResults, trueData = alcoholResults, CI = CI, periods = 2018:2020)
 
-selfHarmSplineScore <- find.score(true = selfHarmData, results = selfHarmResults, model = 'Spline', predictFrom = 2017, CI = 0.95)
-selfHarmRW2Score <- find.score(true = selfHarmData, results = selfHarmResults, model = 'RW2', predictFrom = 2017, CI = 0.95)
-
-
-estimateScores <- 
-  data.frame(data = rep(c('Alcohol', 'Self Harm'), each = 2),
-             model = rep(c('Spline', 'RW2'), times = 2),
-             averageScore = c(alcoholSplineScore$scoreEstimate$averageScore,
-                              alcoholRW2Score$scoreEstimate$averageScore,
-                              selfHarmSplineScore$scoreEstimate$averageScore,
-                              selfHarmRW2Score$scoreEstimate$averageScore),
-             averageWidth = c(alcoholSplineScore$scoreEstimate$averageWidth,
-                              alcoholRW2Score$scoreEstimate$averageWidth,
-                              selfHarmSplineScore$scoreEstimate$averageWidth,
-                              selfHarmRW2Score$scoreEstimate$averageWidth),
-             coverage = c(alcoholSplineScore$scoreEstimate$coverage,
-                          alcoholRW2Score$scoreEstimate$coverage,
-                          selfHarmSplineScore$scoreEstimate$coverage,
-                          selfHarmRW2Score$scoreEstimate$coverage)) %>% 
-  dplyr::mutate(across(-c('model', 'data'), ~ round(.x*100, digits = 2))); estimateScores
-
-
-predictScores <- 
-  data.frame(data = rep(c('Alcohol', 'Self Harm'), each = 2),
-             model = rep(c('Spline', 'RW2'), times = 2),
-             averageScore = c(alcoholSplineScore$scorePredict$averageScore,
-                              alcoholRW2Score$scorePredict$averageScore,
-                              selfHarmSplineScore$scorePredict$averageScore,
-                              selfHarmRW2Score$scorePredict$averageScore),
-             averageWidth = c(alcoholSplineScore$scorePredict$averageWidth,
-                              alcoholRW2Score$scorePredict$averageWidth,
-                              selfHarmSplineScore$scorePredict$averageWidth,
-                              selfHarmRW2Score$scorePredict$averageWidth),
-             coverage = c(alcoholSplineScore$scorePredict$coverage,
-                          alcoholRW2Score$scorePredict$coverage,
-                          selfHarmSplineScore$scorePredict$coverage,
-                          selfHarmRW2Score$scorePredict$coverage)) %>% 
-  dplyr::mutate(across(-c('model', 'data'), ~ round(.x*100, digits = 2))); predictScores
-
+selfHarmEstimationResults <- collect.suicide.results(allModelResults = selfHarmResults, trueData = selfHarmResults, CI = CI, periods = 2000:2017)
+selfHarmPredictionResults <- collect.suicide.results(allModelResults = selfHarmResults, trueData = selfHarmResults, CI = CI, periods = 2018:2020)
 
 allScores <- 
-  cbind(estimateScores %>% dplyr::mutate(type = 'Estimation'),
-        predictScores %>% dplyr::mutate(type = 'In-sample prediction'))
-allScores[,c(1:5,9:11)]
-print(xtable::xtable(allScores[,c(1:5,9:11)]), include.rownames = FALSE)
+  rbind(alcoholEstimationResults %>% dplyr::mutate(data = 'alcohol'),
+        alcoholPredictionResults %>% dplyr::mutate(data = 'alcohol'),
+        selfHarmEstimationResults %>% dplyr::mutate(data = 'selfHarm'),
+        selfHarmPredictionResults %>% dplyr::mutate(data = 'selfHarm')) %>% 
+  dplyr::mutate(model = model %>% factor(., levels = c('Spline', 'RW2')),
+                type = periods %>% factor(., levels = c('2000:2017', '2018:2020'), labels = c('Estimation', 'In-sample prediction')))
+
+scoreTable <- 
+  allScores %>% 
+  dplyr::filter(metric %in% c('is', 'width', 'coverage')) %>% 
+  dplyr::select(data, model, metric, type, score) %>% 
+  dplyr::mutate(score = round(score*100, digits = 2)) %>% 
+  tidyr::pivot_wider(., names_from = 'type', values_from = 'score') %>% 
+  tidyr::pivot_wider(., names_from = 'metric', values_from = c('Estimation', 'In-sample prediction'))
+
+
+print(xtable::xtable(scoreTable), include.rownames = FALSE)
 
 
 
