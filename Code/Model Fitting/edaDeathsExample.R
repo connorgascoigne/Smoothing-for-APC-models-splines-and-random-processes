@@ -26,7 +26,7 @@ resultsDir <- paste0(codeDir, '/Results')
 # saving format ----
 
 height <- width <- 10
-textSize <- 17.5
+textSize <- 25
 
 # load ----
 
@@ -166,7 +166,7 @@ alcoholPredictedHeatmap_spline <-
   ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
   ggplot2::geom_raster() +
   ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
-  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted', linewidth = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dashed', linewidth = 1) +
   ggplot2::labs(x = 'Year', y = 'Age') +
   my.theme(text = element_text(size = textSize),
            axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); alcoholPredictedHeatmap_spline
@@ -177,7 +177,7 @@ alcoholPredictedHeatmap_rw2 <-
   ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
   ggplot2::geom_raster() +
   ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
-  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted', linewidth = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dashed', linewidth = 1) +
   ggplot2::labs(x = 'Year', y = 'Age') +
   my.theme(text = element_text(size = textSize),
            axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); alcoholPredictedHeatmap_rw2
@@ -195,16 +195,16 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/alcoholPredictedHeatmap_rw2.png'
 alcoholPredicted_splineVsRW2 <-
   ggplot2::ggplot(alcoholResults %>% 
                     tidyr::pivot_wider(., names_from = model, values_from = c('yHat', 'lower', 'upper')) %>% 
-                    dplyr::mutate(type = dplyr::if_else(period <= (max(period) -3), 'Estimation', 'In-sample prediction')),
+                    dplyr::mutate(type = dplyr::if_else(period <= (max(period) -3), 'Estimation', 'Prediction')),
                   aes(x = yHat_Spline, y = yHat_RW2, shape = type, colour = type)) +
-  ggplot2::geom_abline(aes(intercept = 0, slope = 1), colour = 'red3', linetype = 'dotted', linewidth = 1) +
+  ggplot2::geom_abline(aes(intercept = 0, slope = 1), colour = 'red3', linetype = 'dashed', linewidth = 1) +
   ggplot2::geom_point() +
   ggplot2::scale_shape_manual(values = c(1, 2)) +
   ggplot2::scale_color_manual(values = c('green4', 'blue3')) +
   ggplot2::labs(x = 'Spline', y = 'RW2') +
   my.theme(legend.title = element_blank(),
            text = element_text(size = textSize),
-           legend.position = c(0.85, 0.1)); alcoholPredicted_splineVsRW2
+           legend.position = c(0.75, 0.1)); alcoholPredicted_splineVsRW2
 
 ggplot2::ggsave(filename = paste0(resultsDir, '/alcoholPredicted_splineVsRW2.png'),
                 plot = alcoholPredicted_splineVsRW2,
@@ -217,7 +217,7 @@ alcoholPredictedLineplot <-
                     alcoholResults %>% 
                     dplyr::mutate(Age_Group = Age_Group %>% stringr::str_replace(., 'Aged ', '') %>% stringr::str_replace(., ' years', '')), 
                   aes(x = period)) +
-  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted', linewidth = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dashed', linewidth = 1) +
   ggplot2::geom_line(aes(y = yHat, color = model)) + 
   ggplot2:: geom_line(aes(y = lower, color = model), linetype = 'dashed') + 
   ggplot2:: geom_line(aes(y = upper, color = model), linetype = 'dashed') +
@@ -292,7 +292,7 @@ selfHarmPredictedHeatmap_spline <-
   ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
   ggplot2::geom_raster() +
   ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
-  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted', linewidth = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dashed', linewidth = 1) +
   ggplot2::labs(x = 'Year', y = 'Age') +
   my.theme(text = element_text(size = textSize),
            axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); selfHarmPredictedHeatmap_spline
@@ -303,7 +303,7 @@ selfHarmPredictedHeatmap_rw2 <-
   ggplot2::scale_y_continuous(breaks = seq(25, 85, 5)) +
   ggplot2::geom_raster() +
   ggplot2::scale_fill_viridis_c('Log rate', option = 'G', direction = 1) +
-  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted', linewidth = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dashed', linewidth = 1) +
   ggplot2::labs(x = 'Year', y = 'Age') +
   my.theme(text = element_text(size = textSize),
            axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)); selfHarmPredictedHeatmap_rw2
@@ -321,16 +321,16 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/selfHarmPredictedHeatmap_rw2.png
 selfHarmPredicted_splineVsRW2 <-
   ggplot2::ggplot(selfHarmResults %>% 
                     tidyr::pivot_wider(., names_from = model, values_from = c('yHat', 'lower', 'upper')) %>% 
-                    dplyr::mutate(type = dplyr::if_else(period <= (max(period) -3), 'Estimation', 'In-sample prediction')),
+                    dplyr::mutate(type = dplyr::if_else(period <= (max(period) -3), 'Estimation', 'Prediction')),
                   aes(x = yHat_Spline, y = yHat_RW2, shape = type, colour = type)) +
-  ggplot2::geom_abline(aes(intercept = 0, slope = 1), colour = 'red3', linetype = 'dotted', linewidth = 1) +
+  ggplot2::geom_abline(aes(intercept = 0, slope = 1), colour = 'red3', linetype = 'dashed', linewidth = 1) +
   ggplot2::geom_point() +
   ggplot2::scale_shape_manual(values = c(1, 2)) +
   ggplot2::scale_color_manual(values = c('green4', 'blue3')) +
   ggplot2::labs(x = 'Spline', y = 'RW2') +
   my.theme(legend.title = element_blank(),
            text = element_text(size = textSize),
-           legend.position = c(0.85, 0.1)); alcoholPredicted_splineVsRW2
+           legend.position = c(0.75, 0.1)); alcoholPredicted_splineVsRW2
 
 ggplot2::ggsave(filename = paste0(resultsDir, '/selfHarmPredicted_splineVsRW2.png'),
                 plot = selfHarmPredicted_splineVsRW2,
@@ -343,7 +343,7 @@ selfHarmPredictedLineplot <-
                     selfHarmResults %>% 
                     dplyr::mutate(Age_Group = Age_Group %>% stringr::str_replace(., 'Aged ', '') %>% stringr::str_replace(., ' years', '')), 
                   aes(x = period)) +
-  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dotted', linewidth = 1) +
+  ggplot2::geom_vline(aes(xintercept = max(period)-3), color = 'red3', linetype = 'dashed', linewidth = 1) +
   ggplot2::geom_line(aes(y = yHat, color = model)) + 
   ggplot2:: geom_line(aes(y = lower, color = model), linetype = 'dashed') + 
   ggplot2:: geom_line(aes(y = upper, color = model), linetype = 'dashed') +
@@ -379,7 +379,7 @@ allScores <-
         selfHarmEstimationResults %>% dplyr::mutate(data = 'selfHarm'),
         selfHarmPredictionResults %>% dplyr::mutate(data = 'selfHarm')) %>% 
   dplyr::mutate(model = model %>% factor(., levels = c('Spline', 'RW2')),
-                type = periods %>% factor(., levels = c('2000:2017', '2018:2020'), labels = c('Estimation', 'In-sample prediction')))
+                type = periods %>% factor(., levels = c('2000:2017', '2018:2020'), labels = c('Estimation', 'Prediction')))
 
 scoreTable <- 
   allScores %>% 
@@ -387,7 +387,7 @@ scoreTable <-
   dplyr::select(data, model, metric, type, score) %>% 
   dplyr::mutate(score = round(score*100, digits = 2)) %>% 
   tidyr::pivot_wider(., names_from = 'type', values_from = 'score') %>% 
-  tidyr::pivot_wider(., names_from = 'metric', values_from = c('Estimation', 'In-sample prediction'))
+  tidyr::pivot_wider(., names_from = 'metric', values_from = c('Estimation', 'Prediction'))
 
 
 print(xtable::xtable(scoreTable), include.rownames = FALSE)
