@@ -26,7 +26,7 @@ resultsDir <- paste0(codeDir, '/Results')
 # saving format ----
 
 height <- width <- 10
-textSize <- 20
+textSize <- 25
 
 # load ----
 
@@ -56,7 +56,7 @@ results <-
   tibble::as_tibble()
 
 pcPriorsPlot <- 
-  ggplot2::ggplot(data = results, aes(x = allSD, y = sd, group = U, colour = U, linetype = U)) +
+  ggplot2::ggplot(data = results, aes(x = allSD, y = sd, group = U, colour = U)) +
   ggplot2::geom_line() +
   ggplot2::labs(x = 'Standard Deviation', y = 'Density') +
   ggplot2::scale_color_manual(values = c('red3', 'blue3', 'green4'),

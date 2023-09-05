@@ -25,7 +25,7 @@ resultsDir <- paste0(codeDir, '/Results')
 # saving format ----
 
 height <- width <- 10
-textSize <- 17.5
+textSize <- 25
 
 # load ----
 
@@ -107,7 +107,7 @@ p1 <-
   ggplot2::labs(y = 'Linear Predictor', x = 'Age') +
   ggplot2::scale_color_manual(values = c('red3', 'green4', 'blue3', 'purple3')) +
   my.theme(legend.title = element_blank(),
-           legend.position = 'top',
+           legend.position = c(0.7, 0.5),
            text = element_text(size = textSize)); p1
 
 ## save ----
