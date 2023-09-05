@@ -127,7 +127,7 @@ for(i in 1:nSims){
     scores <- NULL
     scores <- scoresTemp
   } else {
-    scores <- cbind(score, scoreTemp %>% dplyr::select(-periods, -model, -metric))
+    scores <- cbind(scores, scoresTemp %>% dplyr::select(-periods, -model, -metric))
   }
   
 }
@@ -137,7 +137,7 @@ allScoresFinal <-
   scores  %>% 
   dplyr::mutate(model = model %>% factor(., levels = c('crSpline', 'bsSpline', 'tpSpline', 'rw2PC1', 'rw2PC2', 'rw2PC3'),
                                          labels = c('CRS', 'BS', 'TPRS', 'U = 1', 'U = 3', 'U = 6')),
-                type = periods %>% factor(., levels = c('2000:2017', '2018:2020'), labels = c('Estimation', 'In-sample prediction')),
+                type = periods %>% factor(., levels = c('2000:2017', '2018:2020'), labels = c('Estimation', 'Prediction')),
                 dplyr::select(., starts_with('theta:')) %>% 
                   apply(., 1, my.summary) %>% 
                   lapply(., data.frame) %>%
@@ -183,7 +183,7 @@ allScoresTable <-
   dplyr::select(model, metric, type, mean) %>% 
   dplyr::mutate(mean = round(mean*100, digits = 2)) %>% 
   tidyr::pivot_wider(., names_from = 'type', values_from = 'mean') %>% 
-  tidyr::pivot_wider(., names_from = 'metric', values_from = c('Estimation', 'In-sample prediction')); allScoresTable
+  tidyr::pivot_wider(., names_from = 'metric', values_from = c('Estimation', 'Prediction')); allScoresTable
 
 
 print(xtable::xtable(allScoresTable), include.rownames = FALSE)
