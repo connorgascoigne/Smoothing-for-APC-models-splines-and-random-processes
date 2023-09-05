@@ -26,7 +26,7 @@ resultsDir <- paste0(codeDir, '/Results')
 # saving format ----
 
 height <- width <- 10
-textSize <- 17.5
+textSize <- 25
 
 # load ----
 
@@ -154,6 +154,8 @@ maeBP <-
   ggplot2::geom_boxplot(alpha = 0.2) +
   ggplot2::labs(x = '', y = 'Mean Absolute Error') +
   ggplot2::facet_grid(~ type) +
+  ggplot2::scale_fill_manual(values = c('red3', 'blue3', 'green4', 'orange2', 'purple3', 'pink2')) +
+  ggplot2::scale_colour_manual(values = c('red3', 'blue3', 'green4', 'orange2', 'purple3', 'pink2')) +
   my.theme(text = element_text(size = textSize),
            legend.title = element_blank(),
            axis.text.x = element_blank()); maeBP
@@ -162,6 +164,8 @@ mseBP <-
   ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dotted', linewidth = 1) +
   ggplot2::geom_boxplot(alpha = 0.2) +
   ggplot2::labs(x = '', y = 'Mean Square Error') +
+  ggplot2::scale_fill_manual(values = c('red3', 'blue3', 'green4', 'orange2', 'purple3', 'pink2')) +
+  ggplot2::scale_colour_manual(values = c('red3', 'blue3', 'green4', 'orange2', 'purple3', 'pink2')) +
   ggplot2::facet_grid(~ type) +
   my.theme(text = element_text(size = textSize),
            legend.title = element_blank(),
