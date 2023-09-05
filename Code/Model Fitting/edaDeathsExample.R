@@ -365,6 +365,8 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/selfHarmPredictedLineplot.png'),
 
 # models scores ----
 
+CI <- 0.95
+
 alcoholEstimationResults <- collect.suicide.results(allModelResults = alcoholResults, trueData = alcoholResults, CI = CI, periods = 2000:2017)
 alcoholPredictionResults <- collect.suicide.results(allModelResults = alcoholResults, trueData = alcoholResults, CI = CI, periods = 2018:2020)
 
