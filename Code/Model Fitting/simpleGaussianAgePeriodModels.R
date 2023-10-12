@@ -1,4 +1,4 @@
-# packs ----
+# packages ----
 
 library(tidyverse)
 library(mgcv)
@@ -64,42 +64,6 @@ data <-
 
 # models ----
 
-## inla ----
-
-dataINLA <-
-  data %>% 
-  dplyr::mutate(age_id = age %>% as.factor() %>% as.numeric(),
-                period_id = period %>% as.factor() %>% as.numeric(),
-                age2_id = age_id,
-                period2_id = period_id) %>% 
-  dplyr::mutate(y = dplyr::if_else(period > 2017, NA, y)) 
-
-simpleINLA <- 
-  INLA::inla(formula = 
-               y ~ 
-               f(age2_id, model = 'rw2', hyper = list(prec = list(prior = 'pc.prec', param = c(1, 0.01))), constr = TRUE) +
-               f(period2_id, model = 'rw2', hyper = list(prec = list(prior = 'pc.prec', param = c(1, 0.01))), constr = TRUE),
-             family = 'normal', 
-             data = dataINLA,
-             control.compute = list(config = TRUE),
-             control.predictor = list(compute = FALSE, link = 1),
-             control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-             inla.mode = 'experimental')
-
-reparamINLA <- 
-  INLA::inla(formula = 
-               y ~ 
-               age_id + 
-               period_id + 
-               f(age2_id, model = 'rw2', hyper = list(prec = list(prior = 'pc.prec', param = c(1, 0.01))), constr = TRUE) +
-               f(period2_id, model = 'rw2', hyper = list(prec = list(prior = 'pc.prec', param = c(1, 0.01))), constr = TRUE),
-             family = 'normal', 
-             data = dataINLA,
-             control.compute = list(config = TRUE),
-             control.predictor = list(compute = FALSE, link = 1),
-             control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
-             inla.mode = 'experimental')
-
 ## mgcv ----
 
 dataMGCV.est <- 
@@ -116,11 +80,11 @@ dataMGCV.pred <-
 simpleMGCV <-
   mgcv::gam(formula = 
               y ~ 
-              s(age_id, bs = 'tp', k = 10, fx = FALSE) + 
-              s(period_id, bs = 'tp', k = 10, fx = FALSE),
+              s(age_id, bs = 'cr', k = 12, fx = FALSE) + 
+              s(period_id, bs = 'cr', k = 15, fx = FALSE),
             family = 'gaussian', 
             data = dataMGCV.est, 
-            method = 'REML', 
+            method = 'REML',
             control = list(nthreads = parallel::detectCores()))
 
 reparamMGCV <-
@@ -128,15 +92,74 @@ reparamMGCV <-
               y ~ 
               age_id +
               period_id +
-              s(age_id, bs = 'tp', k = 10, fx = FALSE) + 
-              s(period_id, bs = 'tp', k = 10, fx = FALSE),
+              s(age_id, bs = 'cr', k = 12, fx = FALSE) + 
+              s(period_id, bs = 'cr', k = 15, fx = FALSE),
             family = 'gaussian', 
             data = dataMGCV.est, 
-            method = 'REML', 
+            method = 'REML',
             control = list(nthreads = parallel::detectCores()))
 
 simpleMGCV.pred <- predict(object = simpleMGCV, newdata = dataMGCV.pred, type = 'link', se.fit = TRUE)
 reparamMGCV.pred <- predict(object = reparamMGCV, newdata = dataMGCV.pred, type = 'link', se.fit = TRUE)
+
+simpleAgeLambda <- simpleMGCV$sp[1] %>% as.numeric()
+simplePeriodLambda <- simpleMGCV$sp[2] %>% as.numeric()
+
+reparamAgeLambda <- reparamMGCV$sp[1] %>% as.numeric()
+reparamPeriodLambda <- reparamMGCV$sp[2] %>% as.numeric()
+
+## inla ----
+
+dataINLA <-
+  data %>% 
+  dplyr::mutate(age_id = age %>% as.factor() %>% as.numeric(),
+                period_id = period %>% as.factor() %>% as.numeric(),
+                age2_id = age_id,
+                period2_id = period_id) %>% 
+  dplyr::mutate(y = dplyr::if_else(period > 2017, NA, y)) 
+
+simpleINLA <- 
+  INLA::inla(formula = 
+               y ~ 
+               f(age2_id, model = 'rw2', 
+                 hyper = list(prec = list(prior = 'pc.prec', param = c(1, 0.05),
+                                          initial = log(simpleAgeLambda), fixed = FALSE)),
+                 scale.model = TRUE,
+                 constr = TRUE) +
+               f(period2_id, model = 'rw2', 
+                 hyper = list(prec = list(prior = 'pc.prec', param = c(1, 0.05),
+                                          initial = log(simplePeriodLambda), fixed = FALSE)),
+                 scale.model = TRUE,
+                 constr = TRUE),
+             family = 'normal', 
+             data = dataINLA,
+             control.compute = list(config = TRUE),
+             control.predictor = list(compute = FALSE, link = 1),
+             control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
+             inla.mode = 'experimental')
+
+reparamINLA <- 
+  INLA::inla(formula = 
+               y ~ 
+               age_id + 
+               period_id + 
+               f(age2_id, model = 'rw2', 
+                 hyper = list(prec = list(prior = 'pc.prec', param = c(1, 0.05),
+                                          initial = log(reparamAgeLambda), fixed = FALSE)),
+                 scale.model = TRUE, 
+                 constr = TRUE) +
+               f(period2_id, model = 'rw2', 
+                 hyper = list(prec = list(prior = 'pc.prec', param = c(1, 0.05),
+                                          initial = log(reparamPeriodLambda), fixed = FALSE)),
+                 scale.model = TRUE, 
+                 constr = TRUE),
+             family = 'normal', 
+             data = dataINLA,
+             control.compute = list(config = TRUE),
+             control.predictor = list(compute = FALSE, link = 1),
+             control.inla = list(strategy = 'adaptive', int.strategy = 'auto'),
+             inla.mode = 'experimental')
+
 
 # results ----
 
@@ -196,6 +219,7 @@ ggplot2::ggplot(data = results, aes(x = period)) +
   ggplot2::facet_wrap(~ age, scales = 'free') +
   my.theme(legend.title = element_blank(),
            text = element_text(size = textSize),
-           axis.text.x = element_blank())
+           axis.text.x = element_blank(),
+           legend.position = 'top')
 
 
