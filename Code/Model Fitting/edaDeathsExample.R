@@ -120,8 +120,9 @@ alcoholData <-
                 period = Year,
                 cohort = period - age,
                 N = population,
-                y = alcohol_deaths) %>% 
-  dplyr::select(Age_Group, age, period, cohort, N, y) %>% 
+                y = alcohol_deaths,
+                log_rate = log(y/N)) %>% 
+  dplyr::select(Age_Group, age, period, cohort, N, y, log_rate) %>% 
   dplyr::filter(age >= 25)
 
 ### model fits ----
@@ -151,9 +152,13 @@ rw2Fit <-
 
 alcoholResults <-
   rbind(splineFit %>% dplyr::select(-se) %>%  dplyr::mutate(model = 'Spline'),
-        rw2Fit %>% dplyr::select(-y, -N, -Age_Group) %>% dplyr::mutate(model = 'RW2')) %>%
-  dplyr::mutate(model = model %>% factor(., levels = c('Spline', 'RW2'))) %>%
-  dplyr::left_join(., alcoholData %>% dplyr::select(Age_Group, age) %>% dplyr::distinct(), by = 'age')
+        rw2Fit %>% dplyr::select(-y, -N, -Age_Group, -log_rate) %>% dplyr::mutate(model = 'RW2')) %>%
+  dplyr::mutate(model = model %>% factor(., labels = c('Spline', 'RW2'), levels = c('Spline', 'RW2'))) %>%
+  dplyr::left_join(., 
+                   alcoholData %>% 
+                     dplyr::select(Age_Group, age) %>%
+                     dplyr::distinct(), 
+                   by = 'age')
 
 
 ### plots ----  
@@ -221,9 +226,10 @@ alcoholPredictedLineplot <-
   ggplot2::geom_line(aes(y = yHat, color = model)) + 
   ggplot2:: geom_line(aes(y = lower, color = model), linetype = 'dashed') + 
   ggplot2:: geom_line(aes(y = upper, color = model), linetype = 'dashed') +
-  ggplot2::geom_point(data = alcoholData %>% 
+  ggplot2::geom_point(data = 
+                        alcoholData %>% 
                         dplyr::mutate(Age_Group = Age_Group %>% stringr::str_replace(., 'Aged ', '') %>% stringr::str_replace(., ' years', '')), 
-                      aes(y = log(y/N))) +
+                      aes(y = log_rate)) +
   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
   ggplot2::scale_colour_manual(values = c('green4', 'blue3', 'purple3')) + 
   ggplot2::labs(y = 'Log-Rate', x = 'Year') +
@@ -247,8 +253,9 @@ selfHarmData <-
                 period = Year,
                 cohort = period - age,
                 N = population,
-                y = suicide_deaths) %>% 
-  dplyr::select(Age_Group, age, period, cohort, N, y) %>% 
+                y = suicide_deaths,
+                log_rate = log(y/N)) %>% 
+  dplyr::select(Age_Group, age, period, cohort, N, y, log_rate) %>% 
   dplyr::filter(age >= 25)
 
 ### model fits ----
@@ -278,8 +285,8 @@ rw2Fit <-
 
 selfHarmResults <-
   rbind(splineFit %>% dplyr::select(-se) %>%  dplyr::mutate(model = 'Spline'),
-        rw2Fit %>% dplyr::select(-y, -N, -Age_Group) %>% dplyr::mutate(model = 'RW2')) %>%
-  dplyr::mutate(model = model %>% factor(., levels = c('Spline', 'RW2'))) %>%
+        rw2Fit %>% dplyr::select(-y, -N, -Age_Group, -log_rate) %>% dplyr::mutate(model = 'RW2')) %>%
+  dplyr::mutate(model = model %>% factor(., labels = c('Spline', 'RW2'), levels = c('Spline', 'RW2'))) %>%
   dplyr::left_join(., selfHarmData %>% dplyr::select(Age_Group, age) %>% dplyr::distinct(), by = 'age')
 
 ### plots ----  
@@ -350,7 +357,7 @@ selfHarmPredictedLineplot <-
   ggplot2::geom_point(data = 
                         selfHarmData %>% 
                         dplyr::mutate(Age_Group = Age_Group %>% stringr::str_replace(., 'Aged ', '') %>% stringr::str_replace(., ' years', '')), 
-                      aes(y = log(y/N))) +
+                      aes(y = log_rate)) +
   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
   ggplot2::scale_colour_manual(values = c('green4', 'blue3', 'purple3')) + 
   ggplot2::labs(y = 'Log-Rate', x = 'Year') +
@@ -367,11 +374,11 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/selfHarmPredictedLineplot.png'),
 
 CI <- 0.95
 
-alcoholEstimationResults <- collect.suicide.results(allModelResults = alcoholResults, trueData = alcoholResults, CI = CI, periods = 2000:2017)
-alcoholPredictionResults <- collect.suicide.results(allModelResults = alcoholResults, trueData = alcoholResults, CI = CI, periods = 2018:2020)
+alcoholEstimationResults <- collect.suicide.results(allModelResults = alcoholResults, trueData = alcoholData, CI = CI, periods = 2000:2017)
+alcoholPredictionResults <- collect.suicide.results(allModelResults = alcoholResults, trueData = alcoholData, CI = CI, periods = 2018:2020)
 
-selfHarmEstimationResults <- collect.suicide.results(allModelResults = selfHarmResults, trueData = selfHarmResults, CI = CI, periods = 2000:2017)
-selfHarmPredictionResults <- collect.suicide.results(allModelResults = selfHarmResults, trueData = selfHarmResults, CI = CI, periods = 2018:2020)
+selfHarmEstimationResults <- collect.suicide.results(allModelResults = selfHarmResults, trueData = selfHarmData, CI = CI, periods = 2000:2017)
+selfHarmPredictionResults <- collect.suicide.results(allModelResults = selfHarmResults, trueData = selfHarmData, CI = CI, periods = 2018:2020)
 
 allScores <- 
   rbind(alcoholEstimationResults %>% dplyr::mutate(data = 'alcohol'),
