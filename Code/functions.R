@@ -132,7 +132,12 @@ spline.fit <-
     ctrl <- list(nthreads = parallel::detectCores())
     
     # model fit
-    fit <- mgcv::gam(formula, offset = log(N), family = 'poisson', data = dataEst2, method = 'REML', control = ctrl)
+    fit <- mgcv::gam(formula, 
+                     offset = log(N), 
+                     family = 'poisson', 
+                     data = dataEst2, 
+                     method = 'REML', 
+                     control = ctrl)
     
     # need to match the naming convention in spline.fit()
     dataPred2 <-
@@ -244,7 +249,8 @@ randomWalk.fit <-
     # model fit
     fit <-
       INLA::inla(formula, family = 'poisson',
-                 data = data2, offset = log(data2$N),
+                 data = data2, 
+                 offset = log(data2$N),
                  control.compute = control.compute,
                  control.predictor = list(compute = FALSE, link = 1),
                  control.inla = control.inla,
@@ -393,7 +399,7 @@ collect.suicide.results <- function(allModelResults, trueData, CI, periods){
   
   trueData2 <- 
     trueData %>% 
-    dplyr::mutate(true = yHat) %>% 
+    dplyr::mutate(true = log_rate) %>% 
     dplyr::select(age, period, cohort, true)
   
   splineResults <-
