@@ -391,14 +391,15 @@ allScores <-
 
 scoreTable <- 
   allScores %>% 
-  dplyr::filter(metric %in% c('is', 'width', 'coverage')) %>% 
+  dplyr::filter(metric %in% c('is', 'width')) %>% 
   dplyr::select(data, model, metric, type, score) %>% 
   dplyr::mutate(score = round(score*100, digits = 2)) %>% 
   tidyr::pivot_wider(., names_from = 'type', values_from = 'score') %>% 
   tidyr::pivot_wider(., names_from = 'metric', values_from = c('Estimation', 'Prediction'))
 
-
-print(xtable::xtable(scoreTable), include.rownames = FALSE)
+print(xtable::xtable(scoreTable), 
+      include.rownames = FALSE,
+      file = paste0(resultsDir, '/scoreTableRealData.txt'))
 
 
 
