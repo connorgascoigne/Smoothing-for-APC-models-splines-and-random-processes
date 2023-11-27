@@ -6,22 +6,22 @@ library(INLA)
 
 # directories ---- 
 
-# extract file location of this script
-codePath <- rstudioapi::getActiveDocumentContext()$path
-codePathSplitted <- strsplit(codePath, "/")[[1]]
-
-# retrieve directories
-homeDir <- paste(codePathSplitted[1: (length(codePathSplitted)-3)], collapse = "/")
-codeDir <- paste0(homeDir, '/Code')
-dataDir <- paste0(homeDir, '/Data')
-
-# need to make sure results is made
-
-if(!dir.exists(paths = paste0(codeDir, '/Results'))) {
-  dir.create(path = paste0(codeDir, '/Results'))
-}
-
-resultsDir <- paste0(codeDir, '/Results')
+# # extract file location of this script
+# codePath <- rstudioapi::getActiveDocumentContext()$path
+# codePathSplitted <- strsplit(codePath, "/")[[1]]
+# 
+# # retrieve directories
+# homeDir <- paste(codePathSplitted[1: (length(codePathSplitted)-3)], collapse = "/")
+# codeDir <- paste0(homeDir, '/Code')
+# dataDir <- paste0(homeDir, '/Data')
+# 
+# # need to make sure results is made
+# 
+# if(!dir.exists(paths = paste0(codeDir, '/Results'))) {
+#   dir.create(path = paste0(codeDir, '/Results'))
+# }
+# 
+# resultsDir <- paste0(codeDir, '/Results')
 
 # saving format ----
 
@@ -32,7 +32,36 @@ textSize <- 25
 
 ## functions ----
 
-source(paste0(codeDir, '/functions.R'))
+# source(paste0(codeDir, '/functions.R'))
+
+# theme for plots
+my.theme<-function(...){
+  theme(panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),
+        panel.background=element_blank(),
+        axis.line=element_line(colour='black'),
+        # legend.title=element_blank(),
+        legend.text.align=0,
+        legend.key=element_rect(fill=NA),
+        ...)
+}
+
+# interval score metrics
+interval.score <- function(lower, upper, true, alpha){
+  
+  # lower = rw2PC1_lower; upper = rw2PC1_upper; true = true_logRate; alpha = 0.05;
+  
+  # each part seperately
+  dispersion <- (upper - lower)
+  overprediction <- 2/alpha * (lower - true) * (true < lower)
+  underprediction <- 2/alpha * (true - upper) * (true > upper)
+  
+  averageScore <- (dispersion + underprediction + overprediction) %>% mean()
+  averageWidth <- dispersion %>% mean()
+  coverage <- ((lower < true & true < upper) %>% sum())/length(true)
+  
+  return(list(averageScore = averageScore, averageWidth = averageWidth, coverage = coverage))
+}
 
 ### rewrite data generating function for normal ----
 
@@ -123,13 +152,13 @@ simpleINLA <-
                y ~ 
                f(age2_id, model = 'rw2', 
                  hyper = list(prec = list(prior = 'pc.prec', param = c(1, 0.05),
-                                          initial = log(simpleAgeLambda), fixed = FALSE)),
-                 scale.model = TRUE,
+                                          initial = log(simpleAgeLambda), fixed = TRUE)),
+                 # scale.model = TRUE,
                  constr = TRUE) +
                f(period2_id, model = 'rw2', 
                  hyper = list(prec = list(prior = 'pc.prec', param = c(1, 0.05),
-                                          initial = log(simplePeriodLambda), fixed = FALSE)),
-                 scale.model = TRUE,
+                                          initial = log(simplePeriodLambda), fixed = TRUE)),
+                 # scale.model = TRUE,
                  constr = TRUE),
              family = 'normal', 
              data = dataINLA,
@@ -145,13 +174,13 @@ reparamINLA <-
                period_id + 
                f(age2_id, model = 'rw2', 
                  hyper = list(prec = list(prior = 'pc.prec', param = c(1, 0.05),
-                                          initial = log(reparamAgeLambda), fixed = FALSE)),
-                 scale.model = TRUE, 
+                                          initial = log(reparamAgeLambda), fixed = TRUE)),
+                 # scale.model = TRUE, 
                  constr = TRUE) +
                f(period2_id, model = 'rw2', 
                  hyper = list(prec = list(prior = 'pc.prec', param = c(1, 0.05),
-                                          initial = log(reparamPeriodLambda), fixed = FALSE)),
-                 scale.model = TRUE, 
+                                          initial = log(reparamPeriodLambda), fixed = TRUE)),
+                 # scale.model = TRUE, 
                  constr = TRUE),
              family = 'normal', 
              data = dataINLA,
@@ -207,7 +236,8 @@ results <-
 
 ## plot ----
 
-ggplot2::ggplot(data = results, aes(x = period)) +
+p1 <- 
+  ggplot2::ggplot(data = results, aes(x = period)) +
   ggplot2::geom_vline(aes(xintercept = 2017), color = 'red3', linetype = 'dashed', linewidth = 1) +
   ggplot2::geom_line(aes(y = yHat, color = model)) + 
   ggplot2:: geom_line(aes(y = lower, color = model), linetype = 'dashed') + 
@@ -220,6 +250,40 @@ ggplot2::ggplot(data = results, aes(x = period)) +
   my.theme(legend.title = element_blank(),
            text = element_text(size = textSize),
            axis.text.x = element_blank(),
-           legend.position = 'top')
+           legend.position = 'top'); p1
 
 
+# ggplot2::ggplot(data = results %>% filter(age%in%c(17.5, 37.5, 57.5, 77.5)),
+#                 aes(x = period)) +
+#   ggplot2::geom_vline(aes(xintercept = 2017), color = 'red3', linetype = 'dashed', linewidth = 1) +
+#   ggplot2::geom_line(aes(y = yHat, color = model)) + 
+#   ggplot2:: geom_line(aes(y = lower, color = model), linetype = 'dashed') + 
+#   ggplot2:: geom_line(aes(y = upper, color = model), linetype = 'dashed') +
+#   ggplot2::geom_point(data = data %>% filter(age%in%c(17.5, 37.5, 57.5, 77.5)), aes(y = mean)) +
+#   ggplot2::scale_x_continuous(breaks = seq(2005, 2021, 1)) +
+#   # ggplot2::scale_colour_manual(values = c('green4', 'blue3', 'purple3', 'pink2')) + 
+#   ggplot2::labs(y = '', x = 'Year') +
+#   ggplot2::facet_wrap(~ age, scales = 'free') +
+#   my.theme(legend.title = element_blank(),
+#            text = element_text(size = textSize),
+#            axis.text.x = element_blank(),
+#            legend.position = 'top')
+
+ggplot2::ggsave(
+  plot = p1,
+  filename = 'simpleGaussianAgePeriodModel.png',
+  width = 10, height = 10
+  )
+
+## scores ----
+
+reparamMGCV.allScore <- interval.score(lower = reparamMGCV.results$lower, upper = reparamMGCV.results$upper, true = data$y, alpha = 0.05)
+simpleMGCV.allScore <- interval.score(lower = simpleMGCV.results$lower, upper = simpleMGCV.results$upper, true = data$y, alpha = 0.05)
+
+reparamINLA.allScore <- interval.score(lower = reparamINLA.results$lower, upper = reparamINLA.results$upper, true = data$y, alpha = 0.05)
+simpleINLA.allScore <- interval.score(lower = simpleINLA.results$lower, upper = simpleINLA.results$upper, true = data$y, alpha = 0.05)
+
+reparamMGCV.allScore$averageScore
+simpleMGCV.allScore$averageScore
+reparamINLA.allScore$averageScore
+simpleINLA.allScore$averageScore
