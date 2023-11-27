@@ -40,7 +40,7 @@ data <-
   read.csv(paste0(dataDir, '/mortalityExamplesData.csv')) %>% 
   dplyr::mutate(Age = age_lower + 2.5,
                 alcohol_rate = log((alcohol_deaths + 0.5)/population),
-                selfHarm_rate = log((suicide_deaths+0.5)/population))
+                selfHarm_rate = log((suicide_deaths + 0.5)/population))
 
 
 # data exploration ----
@@ -386,7 +386,8 @@ allScores <-
         selfHarmEstimationResults %>% dplyr::mutate(data = 'selfHarm'),
         selfHarmPredictionResults %>% dplyr::mutate(data = 'selfHarm')) %>% 
   dplyr::mutate(model = model %>% factor(., levels = c('Spline', 'RW2')),
-                type = periods %>% factor(., levels = c('2000:2017', '2018:2020'), labels = c('Estimation', 'Prediction')))
+                type = periods %>% factor(., levels = c('2000:2017', '2018:2020'), 
+                                          labels = c('Estimation', 'Prediction')))
 
 scoreTable <- 
   allScores %>% 
