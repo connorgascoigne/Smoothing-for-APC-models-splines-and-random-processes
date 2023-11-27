@@ -347,14 +347,48 @@ model.score.summary <- function(results, trueData, CI, periods, model) {
 # scores for all simulation data models at once
 collect.simulation.results <- function(allBasisResults, trueData, CI, periods){
   
-  # allBasisResults = allResults[[i]]; trueData = trueData; CI = CI; periods = 2000:2017
+  # # model arguments
+  # i = 1
+  # allBasisResults = allResults[[i]]
+  # trueData = allData[[i]]
+  # CI = CI
+  # periods = 2000:2017
   
-  crSplineResults <- model.score.summary(results = allBasisResults$crSpline, trueData = trueData, CI = CI, periods = periods, model = 'crSpline')
-  bsSplineResults <- model.score.summary(results = allBasisResults$bsSpline, trueData = trueData, CI = CI, periods = periods, model = 'bsSpline')
-  tprsSplineResults <- model.score.summary(results = allBasisResults$tpSpline, trueData = trueData, CI = CI, periods = periods, model = 'tpSpline')
-  rw2PC1Results <- model.score.summary(results = allBasisResults$rw2PC1, trueData = trueData, CI = CI, periods = periods, model = 'rw2PC1')
-  rw2PC2Results <- model.score.summary(results = allBasisResults$rw2PC2, trueData = trueData, CI = CI, periods = periods, model = 'rw2PC2')
-  rw2PC3Results <- model.score.summary(results = allBasisResults$rw2PC3, trueData = trueData, CI = CI, periods = periods, model = 'rw2PC3')
+  # organise true data
+  trueData2 <-
+    trueData %>% 
+    dplyr::mutate(true = log(y/N)) %>% 
+    dplyr::select(age, period, cohort, true) %>% 
+    dplyr::arrange(age, period, cohort)
+  
+  # organise splines
+  crSpline <-
+    allBasisResults$crSpline %>% 
+    dplyr::arrange(age, period, cohort)
+  bsSpline <-
+    allBasisResults$bsSpline %>% 
+    dplyr::arrange(age, period, cohort)
+  tpSpline <-
+    allBasisResults$tpSpline %>% 
+    dplyr::arrange(age, period, cohort)
+  
+  # organise random walks
+  rw2PC1 <-
+    allBasisResults$rw2PC1 %>% 
+    dplyr::arrange(age, period, cohort)
+  rw2PC2 <-
+    allBasisResults$rw2PC2 %>% 
+    dplyr::arrange(age, period, cohort)
+  rw2PC3 <-
+    allBasisResults$rw2PC3 %>% 
+    dplyr::arrange(age, period, cohort)
+  
+  crSplineResults <- model.score.summary(results = crSpline, trueData = trueData2, CI = CI, periods = periods, model = 'crSpline')
+  bsSplineResults <- model.score.summary(results = bsSpline, trueData = trueData2, CI = CI, periods = periods, model = 'bsSpline')
+  tprsSplineResults <- model.score.summary(results = tpSpline, trueData = trueData2, CI = CI, periods = periods, model = 'tpSpline')
+  rw2PC1Results <- model.score.summary(results = rw2PC1, trueData = trueData2, CI = CI, periods = periods, model = 'rw2PC1')
+  rw2PC2Results <- model.score.summary(results = rw2PC2, trueData = trueData2, CI = CI, periods = periods, model = 'rw2PC2')
+  rw2PC3Results <- model.score.summary(results = rw2PC3, trueData = trueData2, CI = CI, periods = periods, model = 'rw2PC3')
   
   scores <- 
     rbind(crSplineResults$mae %>% dplyr::rename(score = mae) %>% dplyr::mutate(metric = 'mae') %>% relocate(metric, .after = model),
