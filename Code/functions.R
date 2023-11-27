@@ -309,7 +309,7 @@ interval.score <- function(lower, upper, true, alpha){
   
   averageScore <- (dispersion + underprediction + overprediction) %>% mean()
   averageWidth <- dispersion %>% mean()
-  coverage <- ((lower < true & true < upper) %>% sum)/length(true)
+  coverage <- ((lower < true & true < upper) %>% sum())/length(true)
   
   return(list(averageScore = averageScore, averageWidth = averageWidth, coverage = coverage))
 }
@@ -395,20 +395,23 @@ collect.simulation.results <- function(allBasisResults, trueData, CI, periods){
 # scores for all suicide data models at once
 collect.suicide.results <- function(allModelResults, trueData, CI, periods){
   
-  # allModelResults = alcoholResults; trueData = alcoholResults; CI = 0.95; periods = 2000:2017
+  # allModelResults = alcoholResults; trueData = alcoholData; CI = 0.95; periods = 2000:2017
   
   trueData2 <- 
     trueData %>% 
     dplyr::mutate(true = log_rate) %>% 
-    dplyr::select(age, period, cohort, true)
+    dplyr::select(age, period, cohort, true) %>% 
+    dplyr::arrange(age, period, cohort)
   
   splineResults <-
     allModelResults %>% 
-    dplyr::filter(model == 'Spline')
+    dplyr::filter(model == 'Spline') %>% 
+    dplyr::arrange(age, period, cohort)
   
   rw2Results <-
     allModelResults %>% 
-    dplyr::filter(model == 'RW2')
+    dplyr::filter(model == 'RW2') %>% 
+    dplyr::arrange(age, period, cohort)
   
   splineScores <- model.score.summary(results = splineResults, trueData = trueData2, CI = CI, periods = periods, model = 'Spline')
   rw2Scores <- model.score.summary(results = rw2Results, trueData = trueData2, CI = CI, periods = periods, model = 'RW2')
