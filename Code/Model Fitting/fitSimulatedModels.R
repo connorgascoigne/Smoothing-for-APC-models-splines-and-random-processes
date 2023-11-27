@@ -109,16 +109,10 @@ parallel::stopCluster(cl = myCluster)
 
 CI <- 0.95
 
-trueData <- 
-  allData[[1]] %>%
-  dplyr::select(age, period, cohort) %>%
-  dplyr::mutate(true = age.fun(age - mean(age)) + per.fun(period - mean(period)) + coh.fun(cohort - mean(cohort)))
-
-
 for(i in 1:nSims){
   
-  estimationResults <- collect.simulation.results(allBasisResults = allResults[[i]], trueData = trueData, CI = CI, periods = 2000:2017)
-  predictionResults <- collect.simulation.results(allBasisResults = allResults[[i]], trueData = trueData, CI = CI, periods = 2018:2020)
+  estimationResults <- collect.simulation.results(allBasisResults = allResults[[i]], trueData = allData[[i]], CI = CI, periods = 2000:2017)
+  predictionResults <- collect.simulation.results(allBasisResults = allResults[[i]], trueData = allData[[i]], CI = CI, periods = 2018:2020)
   
   scoresTemp <- rbind(estimationResults, predictionResults)
   
@@ -183,11 +177,13 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/mseBP.png'),
 
 allScoresTable <- 
   allScoresFinal %>% 
-  dplyr::filter(metric %in% c('is', 'width', 'coverage')) %>% 
+  dplyr::filter(metric %in% c('is', 'width')) %>% 
   dplyr::select(model, metric, type, mean) %>% 
   dplyr::mutate(mean = round(mean*100, digits = 2)) %>% 
   tidyr::pivot_wider(., names_from = 'type', values_from = 'mean') %>% 
   tidyr::pivot_wider(., names_from = 'metric', values_from = c('Estimation', 'Prediction')); allScoresTable
 
 
-print(xtable::xtable(allScoresTable), include.rownames = FALSE)
+print(xtable::xtable(allScoresTable), 
+      include.rownames = FALSE,
+      file = paste0(resultsDir, '/allScoreTableSimulatedData.txt'))
