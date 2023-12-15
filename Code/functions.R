@@ -317,7 +317,12 @@ interval.score <- function(lower, upper, true, alpha){
 # mae, mse, is, width and coverage for one set of data
 model.score.summary <- function(results, trueData, CI, periods, model) {
   
-  # results = splineResults; trueData = trueData2; CI = CI; periods = periods; model = 'Spline'
+  # # model arguments
+  # results = crSpline
+  # trueData = trueData2
+  # CI = CI
+  # periods = periods
+  # model = 'crSpline'
   
   res <-
     results %>% 
@@ -334,8 +339,8 @@ model.score.summary <- function(results, trueData, CI, periods, model) {
   
   scores <- interval.score(lower = lower, upper = upper, true = truth, alpha = (1-CI))
   
-  mae <- data.frame(periods = periodLabel, model = model, mae = abs(estimate - truth))
-  mse <- data.frame(periods = periodLabel, model = model, mse = (estimate - truth)^2)
+  mae <- data.frame(periods = periodLabel, model = model, mae = mean(abs(estimate - truth)))
+  mse <- data.frame(periods = periodLabel, model = model, mse = mean((estimate - truth)^2))
   is <- data.frame(periods = periodLabel, model = model, is = scores$averageScore)
   width <- data.frame(periods = periodLabel, model = model, width = scores$averageWidth)
   coverage <- data.frame(periods = periodLabel, model = model, coverage = scores$coverage)
