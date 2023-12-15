@@ -240,7 +240,7 @@ alcoholPredictedLineplot <-
 
 ggplot2::ggsave(filename = paste0(resultsDir, '/alcoholPredictedLineplot.png'),
                 plot = alcoholPredictedLineplot,
-                height = height, width = width)
+                height = height, width = 2*width)
 
 
 ## self harm ----
@@ -368,7 +368,7 @@ selfHarmPredictedLineplot <-
 
 ggplot2::ggsave(filename = paste0(resultsDir, '/selfHarmPredictedLineplot.png'),
                 plot = selfHarmPredictedLineplot,
-                height = height, width = width)
+                height = height, width = 2*width)
 
 # models scores ----
 
