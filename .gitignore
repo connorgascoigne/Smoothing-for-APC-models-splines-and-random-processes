@@ -55,3 +55,7 @@ vignettes/*.pdf
 
 # PDFs
 .pdf
+
+# specifc files
+Code/apcWithoutLinearTerms.R
+Code/simpleGaussianAgePeriodModel.R
