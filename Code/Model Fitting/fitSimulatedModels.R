@@ -121,30 +121,41 @@ for(i in 1:nSims){
     scores <- NULL
     scores <- scoresTemp
   } else {
-    scores <- cbind(scores, scoresTemp %>% dplyr::select(-periods, -model, -metric))
+    # scores <- cbind(scores, scoresTemp %>% dplyr::select(-periods, -model, -metric))
+    scores <- dplyr::bind_rows(scores, scoresTemp)
   }
   
 }
 
-colnames(scores) <- c('periods', 'model', 'metric', paste0('theta:', 1:nSims))
+# colnames(scores) <- c('periods', 'model', 'metric', paste0('theta:', 1:nSims))
 allScoresFinal <-
   scores  %>% 
   dplyr::mutate(model = model %>% factor(., levels = c('crSpline', 'bsSpline', 'tpSpline', 'rw2PC1', 'rw2PC2', 'rw2PC3'),
                                          labels = c('CRS', 'BS', 'TPRS', 'U = 1', 'U = 3', 'U = 6')),
                 type = periods %>% factor(., levels = c('2000:2017', '2018:2020'), labels = c('Estimation', 'Prediction')),
-                dplyr::select(., starts_with('theta:')) %>% 
-                  apply(., 1, my.summary) %>% 
-                  lapply(., data.frame) %>%
-                  do.call(rbind, .)) %>% 
-  dplyr::select(-starts_with('theta:'))
+                metric = metric %>% factor(., 
+                                           levels = c('mae', 'mse', 'is', 'width', 'coverage'), 
+                                           labels = c('Mean Absolute Error', 'Mean Square Error', 'Interval Score', 'Width', 'Coverage')))
 
 # results ----
 
 ## plots ----
 
+allScoresBP <- 
+  ggplot2::ggplot(data = allScoresFinal %>% dplyr::filter(!(metric %in% c('Coverage'))), aes(x = model, y = score, col = model, fill = model)) +
+  # ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dotted', linewidth = 1) +
+  ggplot2::geom_boxplot(alpha = 0.2) +
+  ggplot2::labs(x = '', y = '') +
+  ggplot2::facet_grid(metric ~ type, scales = 'free') +
+  ggplot2::scale_fill_manual(values = c('red3', 'blue3', 'green4', 'orange2', 'purple3', 'pink2')) +
+  ggplot2::scale_colour_manual(values = c('red3', 'blue3', 'green4', 'orange2', 'purple3', 'pink2')) +
+  my.theme(text = element_text(size = textSize),
+           legend.title = element_blank(),
+           axis.text.x = element_blank()); allScoresBP
+
 maeBP <- 
-  ggplot2::ggplot(data = allScoresFinal %>% dplyr::filter(metric == 'mae'), aes(x = model, y = mean, col = model, fill = model)) +
-  ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dotted', linewidth = 1) +
+  ggplot2::ggplot(data = allScoresFinal %>% dplyr::filter(metric == 'Mean Absolute Error'), aes(x = model, y = score, col = model, fill = model)) +
+  # ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dotted', linewidth = 1) +
   ggplot2::geom_boxplot(alpha = 0.2) +
   ggplot2::labs(x = '', y = 'Mean Absolute Error') +
   ggplot2::facet_grid(~ type) +
@@ -154,8 +165,8 @@ maeBP <-
            legend.title = element_blank(),
            axis.text.x = element_blank()); maeBP
 mseBP <- 
-  ggplot2::ggplot(data = allScoresFinal %>% dplyr::filter(metric == 'mse'), aes(x = model, y = mean, col = model, fill = model)) +
-  ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dotted', linewidth = 1) +
+  ggplot2::ggplot(data = allScoresFinal %>% dplyr::filter(metric == 'Mean Sqaure Error'), aes(x = model, y = score, col = model, fill = model)) +
+  # ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dotted', linewidth = 1) +
   ggplot2::geom_boxplot(alpha = 0.2) +
   ggplot2::labs(x = '', y = 'Mean Square Error') +
   ggplot2::scale_fill_manual(values = c('red3', 'blue3', 'green4', 'orange2', 'purple3', 'pink2')) +
@@ -165,6 +176,35 @@ mseBP <-
            legend.title = element_blank(),
            axis.text.x = element_blank()); mseBP
 
+isBP <- 
+  ggplot2::ggplot(data = allScoresFinal %>% dplyr::filter(metric == 'Interval Score'), aes(x = model, y = score, col = model, fill = model)) +
+  # ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dotted', linewidth = 1) +
+  ggplot2::geom_boxplot(alpha = 0.2) +
+  ggplot2::labs(x = '', y = 'Interval Score') +
+  ggplot2::scale_fill_manual(values = c('red3', 'blue3', 'green4', 'orange2', 'purple3', 'pink2')) +
+  ggplot2::scale_colour_manual(values = c('red3', 'blue3', 'green4', 'orange2', 'purple3', 'pink2')) +
+  ggplot2::facet_grid(~ type) +
+  my.theme(text = element_text(size = textSize),
+           legend.title = element_blank(),
+           axis.text.x = element_blank()); isBP
+
+widthBP <- 
+  ggplot2::ggplot(data = allScoresFinal %>% dplyr::filter(metric == 'Width'), aes(x = model, y = score, col = model, fill = model)) +
+  # ggplot2::geom_hline(aes(yintercept = 0), colour = 'black', linetype = 'dotted', linewidth = 1) +
+  ggplot2::geom_boxplot(alpha = 0.2) +
+  ggplot2::labs(x = '', y = 'Interval Score') +
+  ggplot2::scale_fill_manual(values = c('red3', 'blue3', 'green4', 'orange2', 'purple3', 'pink2')) +
+  ggplot2::scale_colour_manual(values = c('red3', 'blue3', 'green4', 'orange2', 'purple3', 'pink2')) +
+  ggplot2::facet_grid(~ type) +
+  my.theme(text = element_text(size = textSize),
+           legend.title = element_blank(),
+           axis.text.x = element_blank()); widthBP
+
+
+ggplot2::ggsave(filename = paste0(resultsDir, '/allScoresBP.png'),
+                plot = allScoresBP,
+                width = 2*width, height = 2*height)
+
 ggplot2::ggsave(filename = paste0(resultsDir, '/maeBP.png'),
                 plot = maeBP,
                 width = width, height = height)
@@ -173,17 +213,27 @@ ggplot2::ggsave(filename = paste0(resultsDir, '/mseBP.png'),
                 plot = mseBP,
                 width = width, height = height)
 
+ggplot2::ggsave(filename = paste0(resultsDir, '/isBP.png'),
+                plot = isBP,
+                width = width, height = height)
+
+ggplot2::ggsave(filename = paste0(resultsDir, '/widthBP.png'),
+                plot = widthBP,
+                width = width, height = height)
+
 ## interval scores ----
 
 allScoresTable <- 
   allScoresFinal %>% 
-  dplyr::filter(metric %in% c('is', 'width')) %>% 
-  dplyr::select(model, metric, type, mean) %>% 
-  dplyr::mutate(mean = round(mean*100, digits = 2)) %>% 
-  tidyr::pivot_wider(., names_from = 'type', values_from = 'mean') %>% 
+  dplyr::summarise(score = 100*mean(score),
+                   .by = c('periods', 'model', 'metric', 'type')) %>% 
+  dplyr::filter(!(metric %in% c('Coverage'))) %>% 
+  # dplyr::filter(metric %in% c('Interval Score', 'Width')) %>% 
+  dplyr::select(model, metric, type, score) %>% 
+  tidyr::pivot_wider(., names_from = 'type', values_from = 'score') %>% 
   tidyr::pivot_wider(., names_from = 'metric', values_from = c('Estimation', 'Prediction')); allScoresTable
 
 
-print(xtable::xtable(allScoresTable), 
+print(xtable::xtable(allScoresTable, digits = 4), 
       include.rownames = FALSE,
       file = paste0(resultsDir, '/allScoreTableSimulatedData.txt'))
